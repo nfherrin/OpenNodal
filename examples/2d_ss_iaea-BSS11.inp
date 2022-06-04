@@ -1,0 +1,27 @@
+OpenNodal_INP_V1
+[CASEID]
+  title 'Steady state IAEA 2D benchmark problem BSS-11 from ANL-7416'
+
+[CORE]
+  dim 2D
+
+  size 17
+  apitch 20.0
+  sym qtr
+
+  assm_map
+    3
+    2 2
+    2 2 2
+    2 2 2 2
+    3 2 2 2 3
+    2 2 2 2 1 1
+    2 2 1 1 1 4 4
+    1 1 1 4 4 4
+    4 4 4 4
+
+[MATERIAL]
+  xs_file bss11.xs
+  1 macro reg1
+  2 macro reg2
+  3 macro reg3

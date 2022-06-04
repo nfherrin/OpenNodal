@@ -1,0 +1,23 @@
+OpenNodal_INP_V1
+[CASEID]
+  title 'Steady state 2D Uniform Core'
+
+[CORE]
+  dim 2D
+
+  size 5
+  apitch 20.0
+  sym full
+
+  assm_map
+    2 2 2 2 2
+    2 2 2 2 2
+    2 2 2 2 2
+    2 2 2 2 2
+    2 2 2 2 2
+
+[MATERIAL]
+  xs_file uniform.xs
+  1 macro A
+  2 macro B
+  3 macro C
