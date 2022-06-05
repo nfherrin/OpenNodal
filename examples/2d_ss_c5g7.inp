@@ -16,6 +16,7 @@ OpenNodal_INP_V1
 
 [MATERIAL]
   xs_file c5g7_assy.xs
-  1 macro UO2_assy
-  2 macro MOX_assy
-  3 macro MOD_assy
+  xs_map
+    1 macro UO2_assy
+    2 macro MOX_assy
+    3 macro MOD_assy

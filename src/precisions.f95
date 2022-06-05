@@ -1,4 +1,4 @@
-MODULE precision_module
+MODULE precisions
 
   ! Real kinds
 
@@ -15,4 +15,4 @@ MODULE precision_module
   INTEGER, PARAMETER :: kc4 = kr4                            ! single precision complex
   INTEGER, PARAMETER :: kc8 = kr8                            ! double precision complex
 
-END MODULE precision_module
+END MODULE precisions

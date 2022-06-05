@@ -22,6 +22,8 @@ OpenNodal_INP_V1
 
 [MATERIAL]
   xs_file bss11.xs
-  1 macro reg1
-  2 macro reg2
-  3 macro reg3
+  xs_map 4
+    1 macro reg1
+    2 macro reg2
+    3 macro reg3
+    4 macro reg4

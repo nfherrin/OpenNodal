@@ -5,6 +5,7 @@ MODULE errors_module
   PRIVATE
   PUBLIC :: fatal_error
 CONTAINS
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   SUBROUTINE fatal_error(message)
     CHARACTER(*), OPTIONAL,INTENT(IN) :: message

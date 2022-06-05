@@ -30,3 +30,9 @@
 *.exe
 *.out
 *.app
+
+#output files
+*.log
+
+#workspace in folder
+workspace/

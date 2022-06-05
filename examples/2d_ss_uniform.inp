@@ -18,6 +18,7 @@ OpenNodal_INP_V1
 
 [MATERIAL]
   xs_file uniform.xs
-  1 macro A
-  2 macro B
-  3 macro C
+  xs_map
+    1 macro A
+    2 macro B
+    3 macro C

@@ -1,9 +1,9 @@
 !a module for string parsing
 MODULE string_module
-  USE precision_module
+  USE precisions
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: parse
+  PUBLIC :: parse,lowercase,uppercase
 
 CONTAINS
 
@@ -12,10 +12,10 @@ CONTAINS
     CHARACTER(*),INTENT(INOUT) :: str
     CHARACTER(*),INTENT(IN) :: delims
     CHARACTER(*),INTENT(OUT) :: args(:)
-    INTEGER,INTENT(OUT) :: nargs
+    INTEGER(ki4),INTENT(OUT) :: nargs
 
     CHARACTER(LEN_TRIM(str)) :: strsav
-    INTEGER :: na,i,lenstr
+    INTEGER(ki4) :: na,i,lenstr
 
     strsav=str
     CALL compact(str)
@@ -43,7 +43,7 @@ CONTAINS
     CHARACTER(1):: ch
     CHARACTER(LEN_TRIM(str)) :: outstr
 
-    INTEGER :: ich,isp,i,k,lenstr
+    INTEGER(ki4) :: ich,isp,i,k,lenstr
 
     str=ADJUSTL(str)
     lenstr=LEN_TRIM(str)
@@ -81,7 +81,7 @@ CONTAINS
 
     LOGICAL :: pres
     CHARACTER :: ch,cha
-    INTEGER :: ipos,iposa,i,ibsl,k,lenstr
+    INTEGER(ki4) :: ipos,iposa,i,ibsl,k,lenstr
 
     pres=PRESENT(sep)
     str=ADJUSTL(str)
@@ -138,7 +138,7 @@ CONTAINS
 
     CHARACTER(1):: ch
     CHARACTER(LEN_TRIM(str))::outstr
-    INTEGER :: i,ibsl,k,lenstr
+    INTEGER(ki4) :: i,ibsl,k,lenstr
 
     str=ADJUSTL(str)
     lenstr=LEN_TRIM(str)
@@ -166,11 +166,73 @@ CONTAINS
   ENDSUBROUTINE removebksl
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  CHARACTER(64) FUNCTION str(k)
-    !   "Convert an INTEGER to string."
-    INTEGER, INTENT(IN) :: k
+  FUNCTION str(k)
+    INTEGER(ki4), INTENT(IN) :: k
+    CHARACTER(64) :: str
 
     WRITE (str, *) k
     str = ADJUSTL(str)
   ENDFUNCTION str
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  FUNCTION lowercase(str)
+    CHARACTER(*),INTENT(IN):: str
+    CHARACTER(len_trim(str)):: lowercase
+
+    INTEGER(ki4) :: i,iav,ilen,ioffset,iqc,iquote
+
+    ilen=len_trim(str)
+    ioffset=iachar('A')-iachar('a')
+    iquote=0
+    lowercase=str
+    DO i=1,ilen
+      iav=iachar(str(i:i))
+      IF(iquote==0 .and. (iav==34 .or.iav==39)) THEN
+        iquote=1
+        iqc=iav
+        CYCLE
+      ENDIF
+      IF(iquote==1 .and. iav==iqc) THEN
+        iquote=0
+        CYCLE
+      ENDIF
+      IF (iquote==1) CYCLE
+      IF(iav >= iachar('A') .and. iav <= iachar('Z')) THEN
+        lowercase(i:i)=achar(iav-ioffset)
+      ELSE
+        lowercase(i:i)=str(i:i)
+      ENDIF
+    ENDDO
+  ENDFUNCTION lowercase
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  FUNCTION uppercase(str)
+    CHARACTER(*),INTENT(IN):: str
+    CHARACTER(len_trim(str)):: uppercase
+
+    INTEGER(ki4) :: i,iav,ilen,ioffset,iqc,iquote
+
+    ilen=len_trim(str)
+    ioffset=iachar('A')-iachar('a')
+    iquote=0
+    uppercase=str
+    DO i=1,ilen
+      iav=iachar(str(i:i))
+      IF(iquote==0 .and. (iav==34 .or.iav==39)) THEN
+        iquote=1
+        iqc=iav
+        CYCLE
+      ENDIF
+      IF(iquote==1 .and. iav==iqc) THEN
+        iquote=0
+        CYCLE
+      ENDIF
+      IF (iquote==1) CYCLE
+      IF(iav >= iachar('a') .and. iav <= iachar('z')) THEN
+        uppercase(i:i)=achar(iav+ioffset)
+      ELSE
+        uppercase(i:i)=str(i:i)
+      ENDIF
+    ENDDO
+  ENDFUNCTION uppercase
 ENDMODULE string_module

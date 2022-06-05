@@ -2,7 +2,7 @@ OpenNodal_ASSY-XS_V1 5 2
 id reg1
 1.5   0.4     !D
 1.0   0.0     !chi
-0.0   0.135   !sigmaf
+0.0   0.135   !nusigmaf
 1.0   1.0     !nu
 0.01  0.08    !sigma_a
 0.0   0.0     !sigma_s->1
@@ -11,7 +11,7 @@ id reg1
 id reg2
 1.5   0.4     !D
 1.0   0.0     !chi
-0.0   0.135   !sigmaf
+0.0   0.135   !nusigmaf
 1.0   1.0     !nu
 0.01  0.085   !sigma_a
 0.0   0.0     !sigma_s->1
@@ -20,7 +20,7 @@ id reg2
 id reg3
 1.5   0.4     !D
 1.0   0.0     !chi
-0.0   0.135   !sigmaf
+0.0   0.135   !nusigmaf
 1.0   1.0     !nu
 0.01  0.13    !sigma_a
 0.0   0.0     !sigma_s->1
@@ -29,7 +29,7 @@ id reg3
 id reg4
 2.0   0.3     !D
 1.0   0.0     !chi
-0.0   0.0     !sigmaf
+0.0   0.0     !nusigmaf
 1.0   1.0     !nu
 0.0   0.01    !sigma_a
 0.0   0.0     !sigma_s->1
@@ -38,7 +38,7 @@ id reg4
 id reg5
 2.0   0.3     !D
 1.0   0.0     !chi
-0.0   0.0     !sigmaf
+0.0   0.0     !nusigmaf
 1.0   1.0     !nu
 0.0   0.055   !sigma_a
 0.0   0.0     !sigma_s->1

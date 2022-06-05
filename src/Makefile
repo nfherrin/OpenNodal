@@ -24,7 +24,8 @@ SRC := \
 				globals.f95	\
 				string_module.f95	\
 				errors_module.f95	\
-				precision_module.f95	\
+				precisions.f95	\
+				xs_types.f95	\
 				input_module.f95	\
 				output_module.f95
 
@@ -81,10 +82,11 @@ $(EXE): $(OBJ) $(CONT_OBJ) $(LIB_OBJ)
 #Use [gfortran -M -cpp *.f95] repeatedly until clean compile to update rules below
 #-----------------------------------------------------------------------------------
 errors_module.o errors_module.mod: errors_module.f95 globals.mod
-globals.o globals.mod: globals.f95
+globals.o globals.mod: globals.f95 precisions.mod xs_types.mod
 input_module.o input_module.mod: input_module.f95 globals.mod \
  errors_module.mod string_module.mod
 main.o: main.f95 globals.mod input_module.mod output_module.mod
 output_module.o output_module.mod: output_module.f95 globals.mod
-precision_module.o precision_module.mod: precision_module.f95
-string_module.o string_module.mod: string_module.f95 precision_module.mod
+precisions.o precisions.mod: precisions.f95
+string_module.o string_module.mod: string_module.f95 precisions.mod
+xs_types.o xs_types.mod: xs_types.f95 precisions.mod
