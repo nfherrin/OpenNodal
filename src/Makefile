@@ -15,7 +15,7 @@ coverage: OPT := -O0 -g --coverage
 
 #-----------------------------------------------------------------------------------
 #Add source files as necessary
-#If the files are not comiled using the genieric rules, add commands under their
+#If the files are not compiled using the generic rules, add commands under their
 #rule declaration. Add these items to FILTER
 #-----------------------------------------------------------------------------------
 
