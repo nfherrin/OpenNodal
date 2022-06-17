@@ -27,10 +27,11 @@ SRC := \
 				precisions.f95	\
 				xs_types.f95	\
 				input_module.f95	\
-				output_module.f95
+				output_module.f95	\
+				solver.f95
 
 OBJ := $(SRC:.f95=.o)
-MOD := $(OBJ:.o=.mod)
+MOD := $(OBJ:.o=.mod) # TODO this is wrong, not all f95 have a mod (e.g., main)
 
 FILTER := \
 
@@ -80,6 +81,8 @@ $(EXE): $(OBJ) $(CONT_OBJ) $(LIB_OBJ)
 #-----------------------------------------------------------------------------------
 #Dependency List
 #Use [gfortran -M -cpp *.f95] repeatedly until clean compile to update rules below
+# TODO makefile is busted.
+# Can't use "mod" in dependency list. Timestamp doesn't update. Need to use "o"
 #-----------------------------------------------------------------------------------
 errors_module.o errors_module.mod: errors_module.f95 globals.mod
 globals.o globals.mod: globals.f95 precisions.mod xs_types.mod
@@ -88,5 +91,6 @@ input_module.o input_module.mod: input_module.f95 globals.mod \
 main.o: main.f95 globals.mod input_module.mod output_module.mod
 output_module.o output_module.mod: output_module.f95 globals.mod
 precisions.o precisions.mod: precisions.f95
+solver.o : solver.f95 globals.mod precisions.mod
 string_module.o string_module.mod: string_module.f95 precisions.mod
 xs_types.o xs_types.mod: xs_types.f95 precisions.mod

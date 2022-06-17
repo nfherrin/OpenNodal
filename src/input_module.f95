@@ -395,6 +395,7 @@ CONTAINS
 
     !allocate the assembly map based upon problem size and symmetry
     !this is the actual problem we will solve, and remember again that the core is assumed square
+    ! TODO need to implement ragged core
     SELECTCASE(prob_sym)
       CASE('full')
         core_x_size=core_size

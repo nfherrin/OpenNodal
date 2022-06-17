@@ -19,4 +19,16 @@ PROGRAM fortNNASA
     !read the base input file
     CALL read_files()
 
+    ! initialize memory
+    ! this is done here to allow for multi-state runs in the future rather than
+    ! initializing inside of the solver
+    if (num_eg /= 2) STOP 'only supporting 2 energy groups'
+    xkeff = 1d0
+    allocate(xflux(core_x_size*core_y_size,num_eg))
+    xflux = 1d0
+
+    CALL solver()
+
+    deallocate(xflux)
+
 ENDPROGRAM fortNNASA
