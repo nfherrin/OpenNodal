@@ -1,3 +1,7 @@
+! TODO sor solver
+
+! TODO proper outputs... (log & stdout)
+
 subroutine solver()
   use globals, only : stdout_unit, &
     core_x_size, core_y_size, &

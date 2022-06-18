@@ -21,6 +21,7 @@ coverage: OPT := -O0 -g --coverage
 
 SRC := \
 				main.f95 	      	\
+				edits_module.f95 \
 				globals.f95	\
 				string_module.f95	\
 				errors_module.f95	\
@@ -84,11 +85,12 @@ $(EXE): $(OBJ) $(CONT_OBJ) $(LIB_OBJ)
 # TODO makefile is busted.
 # Can't use "mod" in dependency list. Timestamp doesn't update. Need to use "o"
 #-----------------------------------------------------------------------------------
+edits_module.o edits_module.mod : edits_module.f95 errors_module.mod globals.mod xs_types.mod
 errors_module.o errors_module.mod: errors_module.f95 globals.mod
 globals.o globals.mod: globals.f95 precisions.mod xs_types.mod
 input_module.o input_module.mod: input_module.f95 globals.mod \
- errors_module.mod string_module.mod
-main.o: main.f95 globals.mod input_module.mod output_module.mod
+ edits_module.mod errors_module.mod string_module.mod
+main.o: main.f95 errors_module.mod globals.mod input_module.mod output_module.mod
 output_module.o output_module.mod: output_module.f95 globals.mod
 precisions.o precisions.mod: precisions.f95
 solver.o : solver.f95 globals.mod precisions.mod
