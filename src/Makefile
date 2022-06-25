@@ -20,24 +20,24 @@ coverage: OPT := -O0 -g --coverage
 #-----------------------------------------------------------------------------------
 
 SRC := \
-				main.f95 	      	\
-				edits_module.f95 \
-				globals.f95	\
-				string_module.f95	\
-				errors_module.f95	\
-				precisions.f95	\
-				xs_types.f95	\
-				input_module.f95	\
-				output_module.f95	\
-				solver.f95
+				main.f90 	      	\
+				edits_module.f90 \
+				globals.f90	\
+				string_module.f90	\
+				errors_module.f90	\
+				precisions.f90	\
+				xs_types.f90	\
+				input_module.f90	\
+				output_module.f90	\
+				solver.f90
 
-OBJ := $(SRC:.f95=.o)
-MOD := $(OBJ:.o=.mod) # TODO this is wrong, not all f95 have a mod (e.g., main)
+OBJ := $(SRC:.f90=.o)
+MOD := $(OBJ:.o=.mod) # TODO this is wrong, not all f90 have a mod (e.g., main)
 
 FILTER := \
 
-OBJ_FILTER := $(FILTER:.f95=.o)
-MOD_FILTER := $(FILTER:.f95=.mod)
+OBJ_FILTER := $(FILTER:.f90=.o)
+MOD_FILTER := $(FILTER:.f90=.mod)
 
 #-----------------------------------------------------------------------------------
 #Phony targets for cleaning and building
@@ -69,10 +69,10 @@ reset: clean
 #-----------------------------------------------------------------------------------
 #Generics for source files
 #-----------------------------------------------------------------------------------
-$(filter-out $(OBJ_FILTER), $(OBJ)): %.o:	%.f95
+$(filter-out $(OBJ_FILTER), $(OBJ)): %.o:	%.f90
 	$(FC) -c $(OPT) $<
 
-$(filter-out $(MOD_FILTER), $(MOD)):	%.mod:	%.f95
+$(filter-out $(MOD_FILTER), $(MOD)):	%.mod:	%.f90
 	$(FC) -c $(OPT) $<
 
 $(EXE): $(OBJ) $(CONT_OBJ) $(LIB_OBJ)
@@ -81,21 +81,21 @@ $(EXE): $(OBJ) $(CONT_OBJ) $(LIB_OBJ)
 
 #-----------------------------------------------------------------------------------
 #Dependency List
-#Use [gfortran -M -cpp *.f95] repeatedly until clean compile to update rules below
+#Use [gfortran -M -cpp *.f90] repeatedly until clean compile to update rules below
 # TODO makefile is busted.
 # Can't use "mod" in dependency list. Timestamp doesn't update. Need to use "o"
 #-----------------------------------------------------------------------------------
-edits_module.o edits_module.mod: edits_module.f95 string_module.mod \
+edits_module.o edits_module.mod: edits_module.f90 string_module.mod \
  xs_types.mod precisions.mod globals.mod errors_module.mod
-errors_module.o errors_module.mod: errors_module.f95 globals.mod
-globals.o globals.mod: globals.f95 precisions.mod xs_types.mod
-input_module.o input_module.mod: input_module.f95 globals.mod \
+errors_module.o errors_module.mod: errors_module.f90 globals.mod
+globals.o globals.mod: globals.f90 precisions.mod xs_types.mod
+input_module.o input_module.mod: input_module.f90 globals.mod \
  errors_module.mod string_module.mod edits_module.mod
-main.o: main.f95 errors_module.mod globals.mod input_module.mod \
+main.o: main.f90 errors_module.mod globals.mod input_module.mod \
  output_module.mod
-output_module.o output_module.mod: output_module.f95 globals.mod
-precisions.o precisions.mod: precisions.f95
-solver.o: solver.f95 precisions.mod globals.mod precisions.mod \
+output_module.o output_module.mod: output_module.f90 globals.mod
+precisions.o precisions.mod: precisions.f90
+solver.o: solver.f90 precisions.mod globals.mod precisions.mod \
  string_module.mod
-string_module.o string_module.mod: string_module.f95 precisions.mod
-xs_types.o xs_types.mod: xs_types.f95 precisions.mod
+string_module.o string_module.mod: string_module.f90 precisions.mod
+xs_types.o xs_types.mod: xs_types.f90 precisions.mod
