@@ -1,4 +1,7 @@
-!input functions
+!OpenNodal is licensed under the MIT License.
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++!
+!> @brief Module for input routines.
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++!
 MODULE input_module
   USE globals
   USE errors_module
@@ -7,44 +10,45 @@ MODULE input_module
   PRIVATE
   PUBLIC :: read_cmd_args,read_files
 
-  !The maximum length of a cardname/blockname
+  !> The maximum length of a cardname/blockname
   INTEGER(ki4),PARAMETER :: MAX_CARDNAME_LEN=32
-  !number of blocks
+  !> number of blocks
   INTEGER(ki4),PARAMETER :: num_blocks=3
-  !The maximum length of a line in the input file
+  !> The maximum length of a line in the input file
+  !> (also need to change in interface IFF changed)
   INTEGER(ki4),PARAMETER :: ll_max=200
-  !(also need to change in interface IFchanged)
-  !The maximum number of params on a given line or inputs for a param
+  !> The maximum number of params on a given line or inputs for a param
+  !> (also need to change in interface IFF changed)
   INTEGER(ki4),PARAMETER :: lp_max=100
-  !(also need to change in interface IFchanged)
+  !> cross section input filename
   CHARACTER(ll_max) :: xs_in
 
   INTEGER(ki4) :: in_unit
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !> This data type stores card information and reads card data
   TYPE :: cardType
-    !name of the card
+    !> name of the card
     CHARACTER(MAX_CARDNAME_LEN) :: cname
-    !logical to tell if block has already appeared
+    !> logical to tell if block has already appeared
     LOGICAL :: found=.FALSE.
-    !readin procedure, unique for each card
+    !> readin procedure, unique for each card
     PROCEDURE(prototype_wordarg),POINTER :: getcard => NULL()
   ENDTYPE cardType
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !> This data type stores card information
   TYPE :: blockType
-    !name of the block
+    !> name of the block
     CHARACTER(MAX_CARDNAME_LEN) :: bname
-    !number of cards in the block
+    !> number of cards in the block
     INTEGER(ki4) :: num_cards
-    !cards in the block
+    !> cards in the block
     TYPE(cardType),ALLOCATABLE :: cards(:)
   ENDTYPE blockType
 
-  !actual blocks variables
+  !> actual blocks variables
   TYPE(blockType) :: blocks(num_blocks)
 
-  !Simple abstract interface for an object method subroutine with word array argument
+  !> Explicitly defines the interface for an object method subroutine with word array argument
   ABSTRACT INTERFACE
     SUBROUTINE prototype_wordarg(thisCard,twords)
       IMPORT :: cardType
@@ -54,8 +58,9 @@ MODULE input_module
   ENDINTERFACE
 
 CONTAINS
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine reads in command line arguments
+!>
   SUBROUTINE read_cmd_args()
     INTEGER(ki4) :: arg_count
 
@@ -66,7 +71,9 @@ CONTAINS
     CALL GET_COMMAND_ARGUMENT(1,base_in)
   ENDSUBROUTINE read_cmd_args
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine reads in all input files
+!>
   SUBROUTINE read_files()
     INTEGER(ki4) :: t_int
     CHARACTER(100) :: t_char
@@ -97,7 +104,7 @@ CONTAINS
 
     CLOSE(in_unit)
 
-    !open input unit
+    !open xs input unit
     OPEN(UNIT=in_unit, FILE=xs_in, STATUS='OLD', ACTION = "READ", IOSTAT=t_int, IOMSG=t_char)
     IF(t_int .NE. 0)THEN
       CALL fatal_error(t_char)
@@ -122,7 +129,9 @@ CONTAINS
     CLOSE(in_unit)
   ENDSUBROUTINE read_files
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine reads in the base input file Version 1
+!>
   SUBROUTINE read_base_inp_v1()
     INTEGER(ki4) :: i,j,t_int,nwords
     CHARACTER(ll_max) :: t_char,words(lp_max)
@@ -201,7 +210,9 @@ CONTAINS
     ENDDO
   ENDSUBROUTINE read_base_inp_v1
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine reads in the cross sections Version 1
+!>
   SUBROUTINE read_xs_inp_v1()
     use edits_module, only : edit_xs
     CHARACTER(ll_max) :: t_char,words(lp_max)
@@ -277,7 +288,10 @@ CONTAINS
 
   ENDSUBROUTINE read_xs_inp_v1
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine finds a given block in the input file
+!> @param block_name - name of the block to find
+!>
   SUBROUTINE find_block(block_name)
     CHARACTER(MAX_CARDNAME_LEN),INTENT(IN) :: block_name
 
@@ -301,7 +315,11 @@ CONTAINS
     ENDDO
   ENDSUBROUTINE find_block
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine gets the next line in a file, ignoring blanks and commented lines
+!> @param line - character string of the line that's been retrieved
+!> @param ios - read error indicator
+!>
   SUBROUTINE get_next_line(line,ios)
     CHARACTER(ll_max),INTENT(OUT) :: line
     INTEGER(ki4),INTENT(OUT) :: ios
@@ -323,7 +341,11 @@ CONTAINS
     ENDDO
   ENDSUBROUTINE get_next_line
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!---------------------------------------------------------------------------------------------------
+!> @brief Subroutine to read in the problem title
+!> @param this_card - The card we're retrieving data for
+!> @param wwords - The string from which the data is being retrieved
+!>
   SUBROUTINE get_title(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
     CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
@@ -341,7 +363,11 @@ CONTAINS
     prob_title=TRIM(ADJUSTL(prob_title))
   ENDSUBROUTINE get_title
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!---------------------------------------------------------------------------------------------------
+!> @brief Subroutine to read in the problem dimensions
+!> @param this_card - The card we're retrieving data for
+!> @param wwords - The string from which the data is being retrieved
+!>
   SUBROUTINE get_dim(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
     CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
@@ -355,7 +381,11 @@ CONTAINS
     ENDIF
   ENDSUBROUTINE get_dim
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!---------------------------------------------------------------------------------------------------
+!> @brief Subroutine to read in the problem size
+!> @param this_card - The card we're retrieving data for
+!> @param wwords - The string from which the data is being retrieved
+!>
   SUBROUTINE get_size(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
     CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
@@ -365,7 +395,11 @@ CONTAINS
     READ(wwords(2),*)core_size
   ENDSUBROUTINE get_size
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!---------------------------------------------------------------------------------------------------
+!> @brief Subroutine to read in the problem pitch
+!> @param this_card - The card we're retrieving data for
+!> @param wwords - The string from which the data is being retrieved
+!>
   SUBROUTINE get_apitch(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
     CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
@@ -375,7 +409,11 @@ CONTAINS
     READ(wwords(2),*)assm_pitch
   ENDSUBROUTINE get_apitch
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!---------------------------------------------------------------------------------------------------
+!> @brief Subroutine to read in the core symmetry
+!> @param this_card - The card we're retrieving data for
+!> @param wwords - The string from which the data is being retrieved
+!>
   SUBROUTINE get_sym(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
     CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
@@ -385,7 +423,11 @@ CONTAINS
     prob_sym=TRIM(lowercase(wwords(2)))
   ENDSUBROUTINE get_sym
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!---------------------------------------------------------------------------------------------------
+!> @brief Subroutine to read in the core assembly map
+!> @param this_card - The card we're retrieving data for
+!> @param wwords - The string from which the data is being retrieved
+!>
   SUBROUTINE get_assm_map(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
     CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
@@ -445,7 +487,11 @@ CONTAINS
     ENDIF
   ENDSUBROUTINE get_assm_map
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!---------------------------------------------------------------------------------------------------
+!> @brief Subroutine to read in the cross section filename
+!> @param this_card - The card we're retrieving data for
+!> @param wwords - The string from which the data is being retrieved
+!>
   SUBROUTINE get_xs_file(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
     CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
@@ -455,7 +501,11 @@ CONTAINS
     xs_in=wwords(2)
   ENDSUBROUTINE get_xs_file
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!---------------------------------------------------------------------------------------------------
+!> @brief Subroutine to read in the cross section mapping
+!> @param this_card - The card we're retrieving data for
+!> @param wwords - The string from which the data is being retrieved
+!>
   SUBROUTINE get_xs_map(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
     CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)

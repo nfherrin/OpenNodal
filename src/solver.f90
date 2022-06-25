@@ -1,26 +1,43 @@
 ! TODO finish implementation
-subroutine sor(aa, b, x, rank, omega, tol_inner_x, tol_inner_maxit)
+!OpenNodal is licensed under the MIT License.
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++!
+!> @brief Nodal solver subroutines.
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++!
+!
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine uses SOR to solve an Ax=b problem for x given A and b
+!> @param aa - A matrix
+!> @param b - RHS b vector
+!> @param x - x solution vector
+!> @param omega -
+!> @param tol_inner_x -
+!> @param tol_inner_maxit -
+!>
+subroutine sor(aa, b, x, omega, tol_inner_x, tol_inner_maxit)
   use precisions, only : ki4, kr8
   IMPLICIT NONE
   ! designed for a 5-stripe matrix with the diagonal in the fifth position
   real(kr8), intent(in) :: aa(:,:) ! (5, rank)
   real(kr8), intent(in) :: b(:)    ! (rank)
   real(kr8), intent(inout) :: x(:)    ! (rank)
-  integer(ki4), intent(in) :: rank
   real(kr8), intent(in) :: omega
   real(kr8), intent(in) :: tol_inner_x
   integer(ki4), intent(in) :: tol_inner_maxit
 
-  integer(ki4) :: i, iter
+  integer(ki4) :: i, iter, rank
+
+  rank=SIZE(b)
 
   do iter = 1,tol_inner_maxit
   enddo
 
 endsubroutine sor
 
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine solves the nodal problem
+!>
 subroutine solver()
-  use globals, only : stdout_unit, & ! TODO output to log as well
-    core_x_size, core_y_size, &
+  use globals, only : stdout_unit, core_x_size, core_y_size, &
     xkeff, xflux, tol_max_iter, tol_xkeff, tol_xflux
   use precisions, only : ki4, kr8
   USE globals, ONLY : print_log

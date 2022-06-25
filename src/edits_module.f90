@@ -1,14 +1,20 @@
+!OpenNodal is licensed under the MIT License.
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++!
+!> @brief Module for performing edits
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++!
 module edits_module
 IMPLICIT NONE
 
 contains
 
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine edits the cross sections, calculating the kinf for each assembly
+!>
   subroutine edit_xs()
     USE string_module, ONLY : str
     use xs_types, only : macro_assm_xs_type
     use precisions, only : ki4, kr8
-    use globals, only : stdout_unit, & ! TODO output to log as well
-      num_assm_reg, assm_xs, num_eg, print_log
+    use globals, only : stdout_unit, num_assm_reg, assm_xs, num_eg, print_log
     use errors_module, only : fatal_error
     IMPLICIT NONE
 
