@@ -85,14 +85,17 @@ $(EXE): $(OBJ) $(CONT_OBJ) $(LIB_OBJ)
 # TODO makefile is busted.
 # Can't use "mod" in dependency list. Timestamp doesn't update. Need to use "o"
 #-----------------------------------------------------------------------------------
-edits_module.o edits_module.mod : edits_module.f95 errors_module.mod globals.mod xs_types.mod
+edits_module.o edits_module.mod: edits_module.f95 string_module.mod \
+ xs_types.mod precisions.mod globals.mod errors_module.mod
 errors_module.o errors_module.mod: errors_module.f95 globals.mod
 globals.o globals.mod: globals.f95 precisions.mod xs_types.mod
 input_module.o input_module.mod: input_module.f95 globals.mod \
- edits_module.mod errors_module.mod string_module.mod
-main.o: main.f95 errors_module.mod globals.mod input_module.mod output_module.mod
+ errors_module.mod string_module.mod edits_module.mod
+main.o: main.f95 errors_module.mod globals.mod input_module.mod \
+ output_module.mod
 output_module.o output_module.mod: output_module.f95 globals.mod
 precisions.o precisions.mod: precisions.f95
-solver.o : solver.f95 globals.mod precisions.mod
+solver.o: solver.f95 precisions.mod globals.mod precisions.mod \
+ string_module.mod
 string_module.o string_module.mod: string_module.f95 precisions.mod
 xs_types.o xs_types.mod: xs_types.f95 precisions.mod

@@ -1,4 +1,4 @@
-!A Fortran based neural network accelerated simulated annealing software.
+!A Fortran based nodal solver
 PROGRAM opennodal
   use errors_module
   USE globals
@@ -15,7 +15,7 @@ PROGRAM opennodal
 
     OPEN(UNIT=log_unit, FILE=TRIM(ADJUSTL(base_in))//'.log', STATUS="REPLACE", ACTION="WRITE")
 
-    CALL printlog('*************************** OpenNodal - Version 1 ***************************')
+    CALL print_log('*************************** OpenNodal - Version 1 ***************************')
 
     !read the base input file
     CALL read_files()

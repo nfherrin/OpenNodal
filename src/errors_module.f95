@@ -11,22 +11,22 @@ CONTAINS
     CHARACTER(*), OPTIONAL,INTENT(IN) :: message
 
     ! Print message
-    CALL printlog("*****************************************************************************")
-    CALL printlog("*****************************************************************************")
-    CALL printlog("*****************************************************************************")
+    CALL print_log("*****************************************************************************")
+    CALL print_log("*****************************************************************************")
+    CALL print_log("*****************************************************************************")
     IF (PRESENT(message)) THEN
-      CALL printlog('FATAL ERROR!')
-      CALL printlog('ERROR: '//TRIM(ADJUSTL(message)))
+      CALL print_log('FATAL ERROR!')
+      CALL print_log('ERROR: '//TRIM(ADJUSTL(message)))
     ELSE
-      CALL printlog('FATAL ERROR!')
-      CALL printlog('...')
-      CALL printlog('No error message given')
+      CALL print_log('FATAL ERROR!')
+      CALL print_log('...')
+      CALL print_log('No error message given')
     ENDIF
-    CALL printlog('>> OpenNodal encountered a fatal error!')
-    CALL printlog('>> Execution of OpenNodal terminated UNsuccessfully!')
-    CALL printlog("*****************************************************************************")
-    CALL printlog("*****************************************************************************")
-    CALL printlog("*****************************************************************************")
+    CALL print_log('>> OpenNodal encountered a fatal error!')
+    CALL print_log('>> Execution of OpenNodal terminated UNsuccessfully!')
+    CALL print_log("*****************************************************************************")
+    CALL print_log("*****************************************************************************")
+    CALL print_log("*****************************************************************************")
 
     STOP
   ENDSUBROUTINE fatal_error

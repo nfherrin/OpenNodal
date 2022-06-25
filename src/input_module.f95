@@ -330,7 +330,7 @@ CONTAINS
 
     INTEGER(ki4) :: len_str,i
 
-    CALL printlog(TRIM(this_card%cname)//' card found')
+    CALL print_log(TRIM(this_card%cname)//' card found')
 
     len_str=SIZE(wwords)
 
@@ -346,7 +346,7 @@ CONTAINS
     CLASS(cardType),INTENT(INOUT) :: this_card
     CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
 
-    CALL printlog(TRIM(this_card%cname)//' card found')
+    CALL print_log(TRIM(this_card%cname)//' card found')
 
     IF(wwords(2) .EQ. '2D')THEN
       prob_dim=2
@@ -360,7 +360,7 @@ CONTAINS
     CLASS(cardType),INTENT(INOUT) :: this_card
     CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
 
-    CALL printlog(TRIM(this_card%cname)//' card found')
+    CALL print_log(TRIM(this_card%cname)//' card found')
 
     READ(wwords(2),*)core_size
   ENDSUBROUTINE get_size
@@ -370,7 +370,7 @@ CONTAINS
     CLASS(cardType),INTENT(INOUT) :: this_card
     CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
 
-    CALL printlog(TRIM(this_card%cname)//' card found')
+    CALL print_log(TRIM(this_card%cname)//' card found')
 
     READ(wwords(2),*)assm_pitch
   ENDSUBROUTINE get_apitch
@@ -380,7 +380,7 @@ CONTAINS
     CLASS(cardType),INTENT(INOUT) :: this_card
     CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
 
-    CALL printlog(TRIM(this_card%cname)//' card found')
+    CALL print_log(TRIM(this_card%cname)//' card found')
 
     prob_sym=TRIM(lowercase(wwords(2)))
   ENDSUBROUTINE get_sym
@@ -395,7 +395,7 @@ CONTAINS
     INTEGER(ki4) :: i,ios,j,oct_sym
 
     wwords(1)=TRIM(wwords(1))
-    CALL printlog(TRIM(this_card%cname)//' card found')
+    CALL print_log(TRIM(this_card%cname)//' card found')
 
     !allocate the assembly map based upon problem size and symmetry
     !this is the actual problem we will solve, and remember again that the core is assumed square
@@ -450,7 +450,7 @@ CONTAINS
     CLASS(cardType),INTENT(INOUT) :: this_card
     CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
 
-    CALL printlog(TRIM(this_card%cname)//' card found')
+    CALL print_log(TRIM(this_card%cname)//' card found')
 
     xs_in=wwords(2)
   ENDSUBROUTINE get_xs_file
@@ -463,7 +463,7 @@ CONTAINS
     INTEGER(ki4) :: i,ios,nwords
     CHARACTER(ll_max) :: t_char,words(lp_max)
 
-    CALL printlog(TRIM(this_card%cname)//' card found')
+    CALL print_log(TRIM(this_card%cname)//' card found')
 
     READ(wwords(2),*)num_assm_reg
     IF(MAXVAL(assm_map) .GT. num_assm_reg)CALL fatal_error('Assembly map index outside of range of xs.')
