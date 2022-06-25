@@ -1,4 +1,7 @@
-!A Fortran based nodal solver
+!OpenNodal is licensed under the MIT License.
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++!
+!> @brief Program driver. A Fortran based nodal solver
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++!
 PROGRAM opennodal
   use errors_module
   USE globals

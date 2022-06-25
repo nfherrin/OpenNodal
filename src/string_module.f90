@@ -1,17 +1,26 @@
-!a module for string parsing
+!OpenNodal is licensed under the MIT License.
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++!
+!> @brief Module for manipulating strings.
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++!
 MODULE string_module
   USE precisions
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: parse,lowercase,uppercase,str
 
-  interface str
-    module procedure str_int, str_real
-  end interface
+  !> interface to overload the str function to work with both integers and reals
+  INTERFACE str
+    MODULE PROCEDURE str_int, str_real
+  ENDINTERFACE
 
 CONTAINS
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine parses a string for a given delimiter
+!> @param str - input string to parse
+!> @param delims - delimiter
+!> @param args - parsed words after delimiting
+!> @param nargs - number of arguments after delimiting
+!>
   SUBROUTINE parse(str,delims,args,nargs)
     CHARACTER(*),INTENT(INOUT) :: str
     CHARACTER(*),INTENT(IN) :: delims
@@ -40,7 +49,10 @@ CONTAINS
     str=strsav
   ENDSUBROUTINE parse
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine compacts a string by removing space or tab character repetitions
+!> @param str - input string to compact
+!>
   SUBROUTINE compact(str)
     CHARACTER(*),INTENT(INOUT) :: str
 
@@ -76,7 +88,13 @@ CONTAINS
     str=ADJUSTL(outstr)
   ENDSUBROUTINE compact
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine splits a string based on a delimiter
+!> @param str - input string to split, outputs the string after the delimiter
+!> @param delims - delimiter
+!> @param before - portion of string before the delimiter
+!> @param sep - contains the found delimiter
+!>
   SUBROUTINE split(str,delims,before,sep)
     CHARACTER(*),INTENT(INOUT) :: str
     CHARACTER(*),INTENT(IN) :: delims
@@ -136,7 +154,11 @@ CONTAINS
     str=ADJUSTL(str)              ! remove initial spaces
   ENDSUBROUTINE split
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine removes backslash (\) characters. Double backslashes (\\) are replaced
+!>    are replaces by a single backslash
+!> @param str - string to remove backslashes from
+!>
   SUBROUTINE removebksl(str)
     CHARACTER(*),INTENT(INOUT) :: str
 
@@ -169,7 +191,11 @@ CONTAINS
     str=ADJUSTL(outstr)
   ENDSUBROUTINE removebksl
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!---------------------------------------------------------------------------------------------------
+!> @brief This function converts an integer to a string
+!> @param k - integer to convert
+!> @param inform - number of integer places to use, optional defaults to I0 (no additional spacing)
+!>
   FUNCTION str_int(k,inform)
     INTEGER(ki4), INTENT(IN) :: k
     INTEGER, INTENT(IN), OPTIONAL :: inform
@@ -184,7 +210,13 @@ CONTAINS
     ENDIF
   ENDFUNCTION str_int
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!---------------------------------------------------------------------------------------------------
+!> @brief This function converts a double to a string
+!> @param val - double to convert
+!> @param decs - number of decimal places to print out
+!> @param inform - format of the double print. 'es' is scientific, 'f' is decimal.
+!>    Scientific is default
+!>
   FUNCTION str_real(val,decs,inform)
     REAL(kr8), INTENT(IN) :: val
     INTEGER(ki4), INTENT(IN), OPTIONAL :: decs
@@ -204,7 +236,10 @@ CONTAINS
     str_real = ADJUSTL(str_real)
   ENDFUNCTION str_real
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!---------------------------------------------------------------------------------------------------
+!> @brief This function makes a string lowercase
+!> @param str - string to make lowercase
+!>
   FUNCTION lowercase(str)
     CHARACTER(*),INTENT(IN):: str
     CHARACTER(len_trim(str)):: lowercase
@@ -235,7 +270,10 @@ CONTAINS
     ENDDO
   ENDFUNCTION lowercase
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!---------------------------------------------------------------------------------------------------
+!> @brief This function makes a string uppercase
+!> @param str - string to make uppercase
+!>
   FUNCTION uppercase(str)
     CHARACTER(*),INTENT(IN):: str
     CHARACTER(len_trim(str)):: uppercase
