@@ -3,7 +3,11 @@ MODULE string_module
   USE precisions
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: parse,lowercase,uppercase
+  PUBLIC :: parse,lowercase,uppercase,str
+
+  interface str
+    module procedure str_int, str_real
+  end interface
 
 CONTAINS
 
@@ -166,13 +170,39 @@ CONTAINS
   ENDSUBROUTINE removebksl
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  FUNCTION str(k)
+  FUNCTION str_int(k,inform)
     INTEGER(ki4), INTENT(IN) :: k
-    CHARACTER(64) :: str
+    INTEGER, INTENT(IN), OPTIONAL :: inform
+    CHARACTER(64) :: str_int
+    CHARACTER(64) :: format_char
 
-    WRITE (str, *) k
-    str = ADJUSTL(str)
-  ENDFUNCTION str
+    WRITE (str_int, *) k
+    str_int = ADJUSTL(str_int)
+    IF(PRESENT(inform))THEN
+      WRITE(format_char,'(A,I0,A)')'(I',inform,')'
+      WRITE (str_int, format_char) k
+    ENDIF
+  ENDFUNCTION str_int
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  FUNCTION str_real(val,decs,inform)
+    REAL(kr8), INTENT(IN) :: val
+    INTEGER(ki4), INTENT(IN), OPTIONAL :: decs
+    CHARACTER(*), INTENT(IN), OPTIONAL :: inform
+    CHARACTER(64) :: str_real
+    CHARACTER(64) :: format_char
+    CHARACTER(2) :: real_form
+    INTEGER(ki4) :: ndecs
+
+    ndecs=6
+    real_form='ES'
+    IF(PRESENT(decs))ndecs=decs
+    IF(PRESENT(inform))real_form=TRIM(ADJUSTL(inform))
+
+    WRITE(format_char,'(2A,I0,A,I0,A)')'(',real_form,ndecs+8,'.',ndecs,')'
+    WRITE (str_real, format_char) val
+    str_real = ADJUSTL(str_real)
+  ENDFUNCTION str_real
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   FUNCTION lowercase(str)
