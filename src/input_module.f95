@@ -203,6 +203,7 @@ CONTAINS
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   SUBROUTINE read_xs_inp_v1()
+    use edits_module, only : edit_xs
     CHARACTER(ll_max) :: t_char,words(lp_max)
     INTEGER(ki4) :: ios,nwords,num_local_xs,i,j
 
@@ -271,6 +272,9 @@ CONTAINS
         ENDIF
       ENDDO
     ENDDO
+
+    call edit_xs()
+
   ENDSUBROUTINE read_xs_inp_v1
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -395,6 +399,7 @@ CONTAINS
 
     !allocate the assembly map based upon problem size and symmetry
     !this is the actual problem we will solve, and remember again that the core is assumed square
+    ! TODO need to implement ragged core
     SELECTCASE(prob_sym)
       CASE('full')
         core_x_size=core_size

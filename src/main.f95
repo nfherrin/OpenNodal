@@ -1,5 +1,6 @@
 !A Fortran based neural network accelerated simulated annealing software.
-PROGRAM fortNNASA
+PROGRAM opennodal
+  use errors_module
   USE globals
   USE input_module
   USE output_module
@@ -19,4 +20,16 @@ PROGRAM fortNNASA
     !read the base input file
     CALL read_files()
 
-ENDPROGRAM fortNNASA
+    ! initialize memory
+    ! this is done here to allow for multi-state runs in the future rather than
+    ! initializing inside of the solver
+    if (num_eg /= 2) call fatal_error('only supporting 2 energy groups')
+    xkeff = 1d0
+    allocate(xflux(core_x_size*core_y_size,num_eg))
+    xflux = 1d0
+
+    CALL solver()
+
+    deallocate(xflux)
+
+ENDPROGRAM opennodal

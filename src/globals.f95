@@ -39,6 +39,16 @@ MODULE globals
 
   !log input unit
   INTEGER(ki4), PARAMETER :: log_unit=9999
+
+  ! eigenvalue and scalar flux
+  REAL(kr8) :: xkeff=1d0 ! TODO implement an initial user guess
+  REAL(kr8), ALLOCATABLE :: xflux(:,:) ! (nx,ny)
+
+  ! TODO implement user input 
+  INTEGER(ki4) :: tol_max_iter = 100 
+  REAL(kr8) :: tol_xkeff = 1d-6
+  REAL(kr8) :: tol_xflux = 1d-5
+
 CONTAINS
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
