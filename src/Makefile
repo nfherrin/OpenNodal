@@ -29,7 +29,7 @@ SRC := \
 				xs_types.f90	\
 				input_module.f90	\
 				output_module.f90	\
-				solver.f90
+				solvers_module.f90
 
 OBJ := $(SRC:.f90=.o)
 MOD := $(OBJ:.o=.mod) # TODO this is wrong, not all f90 have a mod (e.g., main)
@@ -92,10 +92,10 @@ globals.o globals.mod: globals.f90 precisions.mod xs_types.mod
 input_module.o input_module.mod: input_module.f90 globals.mod \
  errors_module.mod string_module.mod edits_module.mod
 main.o: main.f90 errors_module.mod globals.mod input_module.mod \
- output_module.mod
+ output_module.mod solvers_module.mod
 output_module.o output_module.mod: output_module.f90 globals.mod
 precisions.o precisions.mod: precisions.f90
-solver.o: solver.f90 precisions.mod globals.mod precisions.mod \
- string_module.mod
+solvers_module.o solvers_module.mod: solvers_module.f90 globals.mod \
+ precisions.mod globals.mod precisions.mod string_module.mod
 string_module.o string_module.mod: string_module.f90 precisions.mod
 xs_types.o xs_types.mod: xs_types.f90 precisions.mod
