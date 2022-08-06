@@ -96,6 +96,7 @@ main.o: main.f90 errors_module.mod globals.mod input_module.mod \
 output_module.o output_module.mod: output_module.f90 globals.mod
 precisions.o precisions.mod: precisions.f90
 solvers_module.o solvers_module.mod: solvers_module.f90 globals.mod \
- precisions.mod globals.mod precisions.mod string_module.mod
+ errors_module.mod precisions.mod globals.mod precisions.mod \
+ string_module.mod
 string_module.o string_module.mod: string_module.f90 precisions.mod
 xs_types.o xs_types.mod: xs_types.f90 precisions.mod

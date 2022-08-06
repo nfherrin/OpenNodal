@@ -5,6 +5,7 @@
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++!
 MODULE solvers_module
   USE globals
+  USE errors_module
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: solver
@@ -54,15 +55,14 @@ CONTAINS
     real(kr8) :: conv_xflux, conv_xkeff
 
     real(kr8), allocatable :: bvec(:) ! (core_x_size*core_y_size*2)
-    real(kr8), allocatable :: amat(:,:) ! (5, core_x_size*core_y_size*2)
+    real(kr8), allocatable :: amat(:,:) ! (core_x_size*core_y_size*num_eg, core_x_size*core_y_size*num_eg)
 
     ! TODO build amat
-    ALLOCATE(amat(5, core_x_size*core_y_size*2)) ! matrix is 5-stripe, 2 energy groups
-    amat=0.0D0
+    ALLOCATE(amat(core_x_size*core_y_size*num_eg, core_x_size*core_y_size*num_eg)) ! eg by problem size
     CALL build_amatrix(amat)
 
     ! TODO create a routine to build bvec
-    ALLOCATE(bvec(core_x_size*core_y_size*2)) ! 2 energy groups
+    ALLOCATE(bvec(core_x_size*core_y_size*num_eg)) ! 2 energy groups
 
     CALL print_log('Iter | Keff     | Conv_Keff | Conv_Flux')
 
@@ -82,5 +82,67 @@ CONTAINS
     CALL print_log('XKEFF = '//str(xkeff,16,'F'))
 
   endsubroutine solver
+
+  !amatrix builder for direct solve
+  SUBROUTINE build_amatrix(amatrix)
+    REAL(kr8), INTENT(INOUT) :: amatrix(:,:)
+    INTEGER(ki4) :: g,j,i,cell_idx,neigh_idx
+
+    amatrix=0.0D0
+    DO g=1,num_eg
+      DO j=1,core_y_size
+        DO i=1,core_x_size
+          cell_idx=(g-1)*core_y_size*core_x_size+(j-1)*core_y_size+i
+          !total xs term for the base of the A matrix diagonal
+          amatrix(cell_idx,cell_idx)=assm_xs(assm_map(i,j))%sigma_t(g)*assm_pitch
+          !left term
+          IF(i .NE. 1)THEN
+            neigh_idx=(g-1)*core_y_size*core_x_size+(j-1)*core_y_size+i-1
+            amatrix(cell_idx,cell_idx)=amatrix(cell_idx,cell_idx)&
+              +2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
+              +assm_pitch/assm_xs(assm_map(i-1,j))%D(g))**(-1)-dtilde(1,i,j)
+            amatrix(cell_idx,neigh_idx)=amatrix(cell_idx,neigh_idx)&
+              -2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
+              +assm_pitch/assm_xs(assm_map(i-1,j))%D(g))**(-1)-dtilde(1,i,j)
+          ENDIF
+          !right term
+          IF(i .NE. core_x_size)THEN
+            neigh_idx=(g-1)*core_y_size*core_x_size+(j-1)*core_y_size+i+1
+            amatrix(cell_idx,cell_idx)=amatrix(cell_idx,cell_idx)&
+              +2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
+              +assm_pitch/assm_xs(assm_map(i+1,j))%D(g))**(-1)+dtilde(1,i+1,j)
+            amatrix(cell_idx,neigh_idx)=amatrix(cell_idx,neigh_idx)&
+              -2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
+              +assm_pitch/assm_xs(assm_map(i+1,j))%D(g))**(-1)+dtilde(1,i+1,j)
+          ENDIF
+          !above term
+          IF(j .NE. 1)THEN
+            neigh_idx=(g-1)*core_y_size*core_x_size+(j-2)*core_y_size+i
+            amatrix(cell_idx,cell_idx)=amatrix(cell_idx,cell_idx)&
+              +2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
+              +assm_pitch/assm_xs(assm_map(i,j-1))%D(g))**(-1)-dtilde(2,i,j)
+            amatrix(cell_idx,neigh_idx)=amatrix(cell_idx,neigh_idx)&
+              -2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
+              +assm_pitch/assm_xs(assm_map(i,j-1))%D(g))**(-1)-dtilde(2,i,j)
+          ENDIF
+          !below term
+          IF(j .NE. core_y_size)THEN
+            neigh_idx=(g-1)*core_y_size*core_x_size+(j)*core_y_size+i
+            amatrix(cell_idx,cell_idx)=amatrix(cell_idx,cell_idx)&
+              +2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
+              +assm_pitch/assm_xs(assm_map(i,j+1))%D(g))**(-1)+dtilde(2,i,j+1)
+            amatrix(cell_idx,neigh_idx)=amatrix(cell_idx,neigh_idx)&
+              -2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
+              +assm_pitch/assm_xs(assm_map(i,j+1))%D(g))**(-1)+dtilde(2,i,j+1)
+          ENDIF
+        ENDDO
+      ENDDO
+    ENDDO
+    amatrix=amatrix/assm_pitch
+    DO i=1,core_y_size*core_x_size*num_eg
+      WRITE(*,'(1000ES9.1)')amatrix(i,:)
+    ENDDO
+    STOP 'build_amatrix not yet complete'
+  ENDSUBROUTINE build_amatrix
 
 ENDMODULE solvers_module

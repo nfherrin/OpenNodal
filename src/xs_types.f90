@@ -26,6 +26,8 @@ MODULE xs_types
     REAL(kr8), DIMENSION(:), ALLOCATABLE :: nu
     !> absorption cross section Sigma_a
     REAL(kr8), DIMENSION(:), ALLOCATABLE :: sigma_a
+    !> total cross section Sigma_t
+    REAL(kr8), DIMENSION(:), ALLOCATABLE :: sigma_t
     !> scattering matrix
     REAL(kr8), DIMENSION(:,:), ALLOCATABLE :: sigma_scat
   ENDTYPE macro_assm_xs_type
