@@ -236,6 +236,8 @@ CONTAINS
       assm_xs(i)%nu=0.0
       ALLOCATE(assm_xs(i)%sigma_a(num_eg))
       assm_xs(i)%sigma_a=0.0
+      ALLOCATE(assm_xs(i)%sigma_t(num_eg))
+      assm_xs(i)%sigma_t=0.0
       ALLOCATE(assm_xs(i)%sigma_scat(num_eg,num_eg))
       assm_xs(i)%sigma_scat=0.0
     ENDDO
@@ -281,6 +283,9 @@ CONTAINS
             EXIT
           ENDIF
         ENDIF
+      ENDDO
+      DO j=1,num_eg
+        assm_xs(i)%sigma_t(j)=assm_xs(i)%sigma_a(j)+SUM(assm_xs(i)%sigma_scat(:,j))
       ENDDO
     ENDDO
 
@@ -456,6 +461,8 @@ CONTAINS
         CALL fatal_error(TRIM(prob_sym)//' is not a valid symmetry')
     ENDSELECT
     ALLOCATE(assm_map(core_x_size,core_y_size))
+    ALLOCATE(dtilde(2,core_x_size,core_y_size))
+    dtilde=0.0
     assm_map=0
 
     !read in the core map
