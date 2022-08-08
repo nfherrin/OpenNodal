@@ -54,21 +54,11 @@ CONTAINS
     integer(ki4) :: iter
     real(kr8) :: conv_xflux, conv_xkeff
 
-    real(kr8), allocatable :: bvec(:) ! (core_x_size*core_y_size*2)
     real(kr8), allocatable :: amat(:,:) ! (core_x_size*core_y_size*num_eg, core_x_size*core_y_size*num_eg)
 
-    !allocate dtildes
-    ALLOCATE(dtilde_x(num_eg,core_x_size+1,core_y_size))
-    ALLOCATE(dtilde_y(num_eg,core_x_size,core_y_size+1))
-    dtilde_x=0.0
-    dtilde_y=0.0
-
-    ! TODO build amat
+    ! build amatrix. This will change with dtilde
     ALLOCATE(amat(core_x_size*core_y_size*num_eg, core_x_size*core_y_size*num_eg)) ! eg by problem size
     CALL build_amatrix(amat)
-
-    ! TODO create a routine to build bvec
-    ALLOCATE(bvec(core_x_size*core_y_size*num_eg)) ! 2 energy groups
 
     CALL print_log('Iter | Keff     | Conv_Keff | Conv_Flux')
 
@@ -77,10 +67,14 @@ CONTAINS
 
     do iter = 1,tol_max_iter
 
+      !solve the cmfd problem for the given dtilde values
+      CALL solve_cmfd(amat)
       CALL print_log(TRIM(str(iter,4))//'   '//TRIM(str(xkeff,6,'F'))//'   '//TRIM(str(conv_xkeff,2)) &
         //'   '//TRIM(str(conv_xflux,2)))
 
       if ((conv_xflux < tol_xflux) .and. (conv_xkeff < tol_xkeff)) exit
+
+      CALL build_amatrix(amat)
 
     enddo
 
@@ -89,9 +83,9 @@ CONTAINS
 
   endsubroutine solver
 
-  !amatrix builder for direct solve
+  !amatrix builder for direct solve for the CMFD portion
   SUBROUTINE build_amatrix(amatrix)
-    REAL(kr8), INTENT(INOUT) :: amatrix(:,:)
+    REAL(kr8), INTENT(OUT) :: amatrix(:,:)
     INTEGER(ki4) :: g,j,i,cell_idx,neigh_idx
 
     amatrix=0.0D0
@@ -106,57 +100,125 @@ CONTAINS
             neigh_idx=(g-1)*core_y_size*core_x_size+(j-1)*core_y_size+i-1
             amatrix(cell_idx,cell_idx)=amatrix(cell_idx,cell_idx)&
               +2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
-              +assm_pitch/assm_xs(assm_map(i-1,j))%D(g))**(-1)-dtilde_x(g,i,j)
+              +assm_pitch/assm_xs(assm_map(i-1,j))%D(g))**(-1)-dtilde_x(i,j,g)
             amatrix(cell_idx,neigh_idx)=amatrix(cell_idx,neigh_idx)&
               -2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
-              +assm_pitch/assm_xs(assm_map(i-1,j))%D(g))**(-1)-dtilde_x(g,i,j)
+              +assm_pitch/assm_xs(assm_map(i-1,j))%D(g))**(-1)-dtilde_x(i,j,g)
           ELSE
             !boundary condition specified by the dtilde factor computation in the polynomial portion
-            amatrix(cell_idx,cell_idx)=amatrix(cell_idx,cell_idx)+dtilde_x(g,i,j)
+            amatrix(cell_idx,cell_idx)=amatrix(cell_idx,cell_idx)+dtilde_x(i,j,g)
           ENDIF
           !right term
           IF(i .NE. core_x_size)THEN
             neigh_idx=(g-1)*core_y_size*core_x_size+(j-1)*core_y_size+i+1
             amatrix(cell_idx,cell_idx)=amatrix(cell_idx,cell_idx)&
               +2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
-              +assm_pitch/assm_xs(assm_map(i+1,j))%D(g))**(-1)+dtilde_x(g,i+1,j)
+              +assm_pitch/assm_xs(assm_map(i+1,j))%D(g))**(-1)+dtilde_x(i+1,j,g)
             amatrix(cell_idx,neigh_idx)=amatrix(cell_idx,neigh_idx)&
               -2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
-              +assm_pitch/assm_xs(assm_map(i+1,j))%D(g))**(-1)+dtilde_x(g,i+1,j)
+              +assm_pitch/assm_xs(assm_map(i+1,j))%D(g))**(-1)+dtilde_x(i+1,j,g)
           ELSE
             !boundary condition specified by the dtilde factor computation in the polynomial portion
-            amatrix(cell_idx,cell_idx)=amatrix(cell_idx,cell_idx)+dtilde_x(g,i+1,j)
+            amatrix(cell_idx,cell_idx)=amatrix(cell_idx,cell_idx)+dtilde_x(i+1,j,g)
           ENDIF
           !above term
           IF(j .NE. 1)THEN
             neigh_idx=(g-1)*core_y_size*core_x_size+(j-2)*core_y_size+i
             amatrix(cell_idx,cell_idx)=amatrix(cell_idx,cell_idx)&
               +2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
-              +assm_pitch/assm_xs(assm_map(i,j-1))%D(g))**(-1)-dtilde_y(g,i,j)
+              +assm_pitch/assm_xs(assm_map(i,j-1))%D(g))**(-1)-dtilde_y(i,j,g)
             amatrix(cell_idx,neigh_idx)=amatrix(cell_idx,neigh_idx)&
               -2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
-              +assm_pitch/assm_xs(assm_map(i,j-1))%D(g))**(-1)-dtilde_y(g,i,j)
+              +assm_pitch/assm_xs(assm_map(i,j-1))%D(g))**(-1)-dtilde_y(i,j,g)
           ELSE
             !boundary condition specified by the dtilde factor computation in the polynomial portion
-            amatrix(cell_idx,cell_idx)=amatrix(cell_idx,cell_idx)+dtilde_y(g,i,j)
+            amatrix(cell_idx,cell_idx)=amatrix(cell_idx,cell_idx)+dtilde_y(i,j,g)
           ENDIF
           !below term
           IF(j .NE. core_y_size)THEN
             neigh_idx=(g-1)*core_y_size*core_x_size+(j)*core_y_size+i
             amatrix(cell_idx,cell_idx)=amatrix(cell_idx,cell_idx)&
               +2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
-              +assm_pitch/assm_xs(assm_map(i,j+1))%D(g))**(-1)+dtilde_y(g,i,j+1)
+              +assm_pitch/assm_xs(assm_map(i,j+1))%D(g))**(-1)+dtilde_y(i,j+1,g)
             amatrix(cell_idx,neigh_idx)=amatrix(cell_idx,neigh_idx)&
               -2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
-              +assm_pitch/assm_xs(assm_map(i,j+1))%D(g))**(-1)+dtilde_y(g,i,j+1)
+              +assm_pitch/assm_xs(assm_map(i,j+1))%D(g))**(-1)+dtilde_y(i,j+1,g)
           ELSE
             !boundary condition specified by the dtilde factor computation in the polynomial portion
-            amatrix(cell_idx,cell_idx)=amatrix(cell_idx,cell_idx)+dtilde_y(g,i,j+1)
+            amatrix(cell_idx,cell_idx)=amatrix(cell_idx,cell_idx)+dtilde_y(i,j+1,g)
           ENDIF
         ENDDO
       ENDDO
     ENDDO
     amatrix=amatrix/assm_pitch
   ENDSUBROUTINE build_amatrix
+
+  !solves the cmfd problem based on the current amatrix
+  SUBROUTINE solve_cmfd(amatrix)
+    REAL(kr8), INTENT(IN) :: amatrix(:,:)
+    REAL(kr8), ALLOCATABLE :: bvec(:),atemp(:,:) ! (core_x_size*core_y_size*num_eg)
+    REAL(kr8) :: flux_err,keff_err
+    INTEGER :: i,j,g,prob_size,err1,cell_idx
+    INTEGER,ALLOCATABLE :: ipiv(:)
+
+    prob_size=core_x_size*core_y_size*num_eg
+    ! build bvec. This will change each inner iteration since we're doing power iterations
+    ALLOCATE(bvec(prob_size)) ! eg by problem size
+    ALLOCATE(atemp(prob_size,prob_size)) ! eg by problem size
+    ALLOCATE(ipiv(prob_size)) ! eg by problem size
+
+    DO
+      !normalize xflux to 1
+      xflux=xflux/SUM(xflux)
+      !build the bvec based on current keff and flux
+      CALL build_bvec(bvec)
+
+      atemp=amatrix
+      CALL DGESV(prob_size,1,atemp,prob_size,ipiv,bvec,prob_size,err1)
+      IF(err1 .NE. 0)CALL fatal_error('DGESV failed')
+
+      !assign xflux to the new bvec
+      DO j=1,core_y_size
+        DO i=1,core_x_size
+          DO g=1,num_eg
+            cell_idx=(g-1)*core_y_size*core_x_size+(j-1)*core_y_size+i
+            xflux(i,j,g)=bvec(cell_idx)
+          ENDDO
+        ENDDO
+      ENDDO
+      keff_err=ABS(SUM(xflux)-xkeff)/SUM(xflux)
+      xkeff=SUM(xflux)
+      WRITE(*,*)keff_err,xkeff
+      STOP 'solve_cmfd not yet complete'
+    ENDDO
+    STOP 'solve_cmfd not yet complete'
+  ENDSUBROUTINE solve_cmfd
+
+  !bvector builder for current flux
+  SUBROUTINE build_bvec(bvec)
+    REAL(kr8), INTENT(OUT) :: bvec(:)
+    INTEGER(ki4) :: i,j,g,gp,cell_idx,loc_id
+    REAL(kr8) :: fiss_src,scat_src
+    bvec=0.0D0
+    DO j=1,core_y_size
+      DO i=1,core_x_size
+        !compute fission source for this cell
+        loc_id=assm_map(i,j)
+        fiss_src=0.0D0
+        DO gp=1,num_eg
+          fiss_src=fiss_src+xflux(i,j,gp)*assm_xs(loc_id)%nusigma_f(gp)
+        ENDDO
+        DO g=1,num_eg
+          cell_idx=(g-1)*core_y_size*core_x_size+(j-1)*core_y_size+i
+          !set bvec to fission source
+          bvec(cell_idx)=fiss_src*assm_xs(loc_id)%chi(g)/xkeff
+          !and add scattering source
+          DO gp=1,num_eg
+            bvec(cell_idx)=bvec(cell_idx)+xflux(i,j,gp)*assm_xs(loc_id)%sigma_scat(g,gp)
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDSUBROUTINE build_bvec
 
 ENDMODULE solvers_module
