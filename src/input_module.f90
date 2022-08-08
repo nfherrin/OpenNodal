@@ -461,8 +461,6 @@ CONTAINS
         CALL fatal_error(TRIM(prob_sym)//' is not a valid symmetry')
     ENDSELECT
     ALLOCATE(assm_map(core_x_size,core_y_size))
-    ALLOCATE(dtilde(2,core_x_size,core_y_size))
-    dtilde=0.0
     assm_map=0
 
     !read in the core map
