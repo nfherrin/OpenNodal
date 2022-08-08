@@ -192,11 +192,11 @@ CONTAINS
       CALL calc_fiss_source(fiss_src(2,:,:))
       !calculate the eigenvalue
       keff_old=xkeff
-      xkeff=SUM(fiss_src(2,:,:))/SUM(fiss_src(1,:,:))
+      xkeff=xkeff*SUM(fiss_src(2,:,:))/SUM(fiss_src(1,:,:))
       keff_err=ABS(xkeff-keff_old)/xkeff
-      WRITE(*,'(2ES16.8)')keff_err,xkeff
       !normalize xflux to 1
-      xflux=xflux/SUM(xflux)
+      xflux=xflux/SUM(xflux(:,:,2))
+      WRITE(*,'(200ES16.8)')keff_err,xkeff
     ENDDO
     STOP 'solve_cmfd not yet complete'
   ENDSUBROUTINE solve_cmfd
@@ -242,5 +242,4 @@ CONTAINS
       ENDDO
     ENDDO
   ENDSUBROUTINE calc_fiss_source
-
 ENDMODULE solvers_module
