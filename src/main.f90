@@ -29,8 +29,13 @@ PROGRAM opennodal
     ! initializing inside of the solver
     if (num_eg /= 2) call fatal_error('only supporting 2 energy groups')
     xkeff = 1d0
-    allocate(xflux(core_x_size*core_y_size,num_eg))
+    allocate(xflux(core_x_size,core_y_size,num_eg))
     xflux = 1d0
+    !allocate dtildes
+    ALLOCATE(dtilde_x(core_x_size+1,core_y_size,num_eg))
+    ALLOCATE(dtilde_y(core_x_size,core_y_size+1,num_eg))
+    dtilde_x=0.0
+    dtilde_y=0.0
 
     CALL solver()
 

@@ -39,6 +39,9 @@ FILTER := \
 OBJ_FILTER := $(FILTER:.f90=.o)
 MOD_FILTER := $(FILTER:.f90=.mod)
 
+#lapack libraries
+BLIBS = -llapack -lblas
+
 #-----------------------------------------------------------------------------------
 #Phony targets for cleaning and building
 #-----------------------------------------------------------------------------------
@@ -76,7 +79,7 @@ $(filter-out $(MOD_FILTER), $(MOD)):	%.mod:	%.f90
 	$(FC) -c $(OPT) $<
 
 $(EXE): $(OBJ) $(CONT_OBJ) $(LIB_OBJ)
-	$(FC) -o $@$(TYPE)$(EXT) $(OPT) $(OBJ) $(CONT_OBJ) $(LIB_OBJ)
+	$(FC) -o $@$(TYPE)$(EXT) $(OPT) $(OBJ) $(CONT_OBJ) $(LIB_OBJ) $(BLIBS)
 	mv ./$(EXE)$(TYPE)$(EXT) ../
 
 #-----------------------------------------------------------------------------------

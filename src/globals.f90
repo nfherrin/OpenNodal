@@ -49,7 +49,7 @@ MODULE globals
   !>  eigenvalue
   REAL(kr8) :: xkeff=1d0 ! TODO implement an initial user guess
   !>  scalar flux
-  REAL(kr8), ALLOCATABLE :: xflux(:,:) ! (nx,ny)
+  REAL(kr8), ALLOCATABLE :: xflux(:,:,:) ! (nx,ny)
 
   ! TODO implement user input
   !>  maximum number of iterations
