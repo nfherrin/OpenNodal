@@ -54,24 +54,28 @@ CONTAINS
     integer(ki4) :: iter
     real(kr8) :: conv_xflux, conv_xkeff,keff_old
 
-    real(kr8), allocatable :: amat(:,:) ! (core_x_size*core_y_size*num_eg, core_x_size*core_y_size*num_eg)
+    real(kr8), allocatable :: amat(:,:),flux_old(:,:,:) ! (core_x_size*core_y_size*num_eg, core_x_size*core_y_size*num_eg)
 
     ! build amatrix. This will change with dtilde
     ALLOCATE(amat(core_x_size*core_y_size*num_eg, core_x_size*core_y_size*num_eg)) ! eg by problem size
+    ALLOCATE(flux_old(core_x_size,core_y_size,num_eg))
     CALL build_amatrix(amat)
 
     CALL print_log('Iter | Keff     | Conv_Keff | Conv_Flux')
 
     conv_xflux = 1d2*tol_xflux + 1d0
     conv_xkeff = 1d2*tol_xkeff + 1d0
+    flux_old=xflux
     keff_old=xkeff
 
     do iter = 1,tol_max_iter
 
       !solve the cmfd problem for the given dtilde values
       CALL solve_cmfd(amat)
-      conv_xkeff=(xkeff-keff_old)/xkeff
+      conv_xkeff=ABS(xkeff-keff_old)/xkeff
+      conv_xflux=calc_2norm(RESHAPE(xflux-flux_old,(/1/)))
       keff_old=xkeff
+      flux_old=xflux
       CALL print_log(TRIM(str(iter,4))//'   '//TRIM(str(xkeff,6,'F'))//'   '//TRIM(str(conv_xkeff,2)) &
         //'   '//TRIM(str(conv_xflux,2)))
 
