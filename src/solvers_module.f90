@@ -57,6 +57,12 @@ CONTAINS
     real(kr8), allocatable :: bvec(:) ! (core_x_size*core_y_size*2)
     real(kr8), allocatable :: amat(:,:) ! (core_x_size*core_y_size*num_eg, core_x_size*core_y_size*num_eg)
 
+    !allocate dtildes
+    ALLOCATE(dtilde_x(num_eg,core_x_size+1,core_y_size))
+    ALLOCATE(dtilde_y(num_eg,core_x_size,core_y_size+1))
+    dtilde_x=0.0
+    dtilde_y=0.0
+
     ! TODO build amat
     ALLOCATE(amat(core_x_size*core_y_size*num_eg, core_x_size*core_y_size*num_eg)) ! eg by problem size
     CALL build_amatrix(amat)
@@ -100,49 +106,57 @@ CONTAINS
             neigh_idx=(g-1)*core_y_size*core_x_size+(j-1)*core_y_size+i-1
             amatrix(cell_idx,cell_idx)=amatrix(cell_idx,cell_idx)&
               +2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
-              +assm_pitch/assm_xs(assm_map(i-1,j))%D(g))**(-1)-dtilde(1,i,j)
+              +assm_pitch/assm_xs(assm_map(i-1,j))%D(g))**(-1)-dtilde_x(g,i,j)
             amatrix(cell_idx,neigh_idx)=amatrix(cell_idx,neigh_idx)&
               -2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
-              +assm_pitch/assm_xs(assm_map(i-1,j))%D(g))**(-1)-dtilde(1,i,j)
+              +assm_pitch/assm_xs(assm_map(i-1,j))%D(g))**(-1)-dtilde_x(g,i,j)
+          ELSE
+            !boundary condition specified by the dtilde factor computation in the polynomial portion
+            amatrix(cell_idx,cell_idx)=amatrix(cell_idx,cell_idx)+dtilde_x(g,i,j)
           ENDIF
           !right term
           IF(i .NE. core_x_size)THEN
             neigh_idx=(g-1)*core_y_size*core_x_size+(j-1)*core_y_size+i+1
             amatrix(cell_idx,cell_idx)=amatrix(cell_idx,cell_idx)&
               +2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
-              +assm_pitch/assm_xs(assm_map(i+1,j))%D(g))**(-1)+dtilde(1,i+1,j)
+              +assm_pitch/assm_xs(assm_map(i+1,j))%D(g))**(-1)+dtilde_x(g,i+1,j)
             amatrix(cell_idx,neigh_idx)=amatrix(cell_idx,neigh_idx)&
               -2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
-              +assm_pitch/assm_xs(assm_map(i+1,j))%D(g))**(-1)+dtilde(1,i+1,j)
+              +assm_pitch/assm_xs(assm_map(i+1,j))%D(g))**(-1)+dtilde_x(g,i+1,j)
+          ELSE
+            !boundary condition specified by the dtilde factor computation in the polynomial portion
+            amatrix(cell_idx,cell_idx)=amatrix(cell_idx,cell_idx)+dtilde_x(g,i+1,j)
           ENDIF
           !above term
           IF(j .NE. 1)THEN
             neigh_idx=(g-1)*core_y_size*core_x_size+(j-2)*core_y_size+i
             amatrix(cell_idx,cell_idx)=amatrix(cell_idx,cell_idx)&
               +2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
-              +assm_pitch/assm_xs(assm_map(i,j-1))%D(g))**(-1)-dtilde(2,i,j)
+              +assm_pitch/assm_xs(assm_map(i,j-1))%D(g))**(-1)-dtilde_y(g,i,j)
             amatrix(cell_idx,neigh_idx)=amatrix(cell_idx,neigh_idx)&
               -2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
-              +assm_pitch/assm_xs(assm_map(i,j-1))%D(g))**(-1)-dtilde(2,i,j)
+              +assm_pitch/assm_xs(assm_map(i,j-1))%D(g))**(-1)-dtilde_y(g,i,j)
+          ELSE
+            !boundary condition specified by the dtilde factor computation in the polynomial portion
+            amatrix(cell_idx,cell_idx)=amatrix(cell_idx,cell_idx)+dtilde_y(g,i,j)
           ENDIF
           !below term
           IF(j .NE. core_y_size)THEN
             neigh_idx=(g-1)*core_y_size*core_x_size+(j)*core_y_size+i
             amatrix(cell_idx,cell_idx)=amatrix(cell_idx,cell_idx)&
               +2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
-              +assm_pitch/assm_xs(assm_map(i,j+1))%D(g))**(-1)+dtilde(2,i,j+1)
+              +assm_pitch/assm_xs(assm_map(i,j+1))%D(g))**(-1)+dtilde_y(g,i,j+1)
             amatrix(cell_idx,neigh_idx)=amatrix(cell_idx,neigh_idx)&
               -2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
-              +assm_pitch/assm_xs(assm_map(i,j+1))%D(g))**(-1)+dtilde(2,i,j+1)
+              +assm_pitch/assm_xs(assm_map(i,j+1))%D(g))**(-1)+dtilde_y(g,i,j+1)
+          ELSE
+            !boundary condition specified by the dtilde factor computation in the polynomial portion
+            amatrix(cell_idx,cell_idx)=amatrix(cell_idx,cell_idx)+dtilde_y(g,i,j+1)
           ENDIF
         ENDDO
       ENDDO
     ENDDO
     amatrix=amatrix/assm_pitch
-    DO i=1,core_y_size*core_x_size*num_eg
-      WRITE(*,'(1000ES9.1)')amatrix(i,:)
-    ENDDO
-    STOP 'build_amatrix not yet complete'
   ENDSUBROUTINE build_amatrix
 
 ENDMODULE solvers_module

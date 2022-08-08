@@ -32,7 +32,7 @@ MODULE globals
   TYPE(macro_assm_xs_type),ALLOCATABLE :: assm_xs(:)
 
   !>D-tilde correction factors for each surface
-  REAL(kr8),ALLOCATABLE  :: dtilde(:,:,:)
+  REAL(kr8),ALLOCATABLE  :: dtilde_x(:,:,:),dtilde_y(:,:,:)
 
   !> number energy groups
   INTEGER(ki4) :: num_eg
