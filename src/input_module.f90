@@ -460,7 +460,7 @@ CONTAINS
       CASE DEFAULT
         CALL fatal_error(TRIM(prob_sym)//' is not a valid symmetry')
     ENDSELECT
-    ALLOCATE(assm_map(core_x_size,core_y_size))
+    ALLOCATE(assm_map(core_y_size,core_x_size))
     assm_map=0
 
     !read in the core map
