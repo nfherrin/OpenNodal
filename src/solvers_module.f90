@@ -10,7 +10,7 @@ MODULE solvers_module
   PRIVATE
   PUBLIC :: solver,solver_init
 
-  CHARACTER(*), PARAMETER :: inner_solve_method = 'sor'
+  CHARACTER(*), PARAMETER :: inner_solve_method = 'dgesv'
 
 CONTAINS
 
@@ -25,14 +25,14 @@ CONTAINS
 !> @brief This subroutine solves the nodal problem
 !>
   SUBROUTINE solver_init()
-    INTEGER :: i,ii,j,jj,g,ip,jp,temp_map(core_y_size,core_x_size)
+    INTEGER :: i,ii,j,jj,g,ip,jp,temp_map(core_x_size,core_y_size)
 
     IF(nsplit .GT. 1)THEN
       !in this case we are splitting the system and need to remake the assemply map
       !and recompute the core_x_size and core_y_size
       temp_map=assm_map
       DEALLOCATE(assm_map)
-      ALLOCATE(assm_map(nsplit*core_y_size,nsplit*core_x_size))
+      ALLOCATE(assm_map(nsplit*core_x_size,nsplit*core_y_size))
       assm_map=0
       jp=0
       DO j=1,core_y_size
@@ -42,7 +42,7 @@ CONTAINS
           DO i=1,core_x_size
             DO ii=1,nsplit
               ip=ip+1
-              assm_map(jp,ip)=temp_map(j,i)
+              assm_map(ip,jp)=temp_map(i,j)
             ENDDO
           ENDDO
         ENDDO
@@ -229,7 +229,7 @@ CONTAINS
     ENDDO ! iter = 1,tol_max_iter
 
     DO j=1,core_y_size
-      write(*,'(10000ES16.8)')xflux(:,j,1)
+      !write(*,'(10000ES16.8)')xflux(:,j,1)
     ENDDO
 
     DEALLOCATE(amat, flux_old, bvec)
@@ -255,15 +255,15 @@ CONTAINS
         DO i=1,core_x_size
           cell_idx=calc_idx(i,j,g)
           !total xs term for the base of the A matrix diagonal
-          amatrix(1,cell_idx)=assm_xs(assm_map(j,i))%sigma_t(g)*assm_pitch
+          amatrix(1,cell_idx)=assm_xs(assm_map(i,j))%sigma_t(g)*assm_pitch
           !left term
           IF(i .NE. 1)THEN
             amatrix(1,cell_idx)=amatrix(1,cell_idx)&
-              +2.0D0*(assm_pitch/assm_xs(assm_map(j,i))%D(g)&
-              +assm_pitch/assm_xs(assm_map(j,i-1))%D(g))**(-1)-dtilde_x(i,j,g)
+              +2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
+              +assm_pitch/assm_xs(assm_map(i-1,j))%D(g))**(-1)-dtilde_x(i,j,g)
             amatrix(2,cell_idx)=amatrix(2,cell_idx)&
-              -2.0D0*(assm_pitch/assm_xs(assm_map(j,i))%D(g)&
-              +assm_pitch/assm_xs(assm_map(j,i-1))%D(g))**(-1)-dtilde_x(i,j,g)
+              -2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
+              +assm_pitch/assm_xs(assm_map(i-1,j))%D(g))**(-1)-dtilde_x(i,j,g)
           ELSE
             !boundary condition specified by the dtilde factor computation in the polynomial portion
             amatrix(1,cell_idx)=amatrix(1,cell_idx)+dtilde_x(i,j,g)
@@ -271,11 +271,11 @@ CONTAINS
           !right term
           IF(i .NE. core_x_size)THEN
             amatrix(1,cell_idx)=amatrix(1,cell_idx)&
-              +2.0D0*(assm_pitch/assm_xs(assm_map(j,i))%D(g)&
-              +assm_pitch/assm_xs(assm_map(j,i+1))%D(g))**(-1)+dtilde_x(i+1,j,g)
+              +2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
+              +assm_pitch/assm_xs(assm_map(i+1,j))%D(g))**(-1)+dtilde_x(i+1,j,g)
             amatrix(3,cell_idx)=amatrix(3,cell_idx)&
-              -2.0D0*(assm_pitch/assm_xs(assm_map(j,i))%D(g)&
-              +assm_pitch/assm_xs(assm_map(j,i+1))%D(g))**(-1)+dtilde_x(i+1,j,g)
+              -2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
+              +assm_pitch/assm_xs(assm_map(i+1,j))%D(g))**(-1)+dtilde_x(i+1,j,g)
           ELSE
             !boundary condition specified by the dtilde factor computation in the polynomial portion
             amatrix(1,cell_idx)=amatrix(1,cell_idx)+dtilde_x(i+1,j,g)
@@ -283,11 +283,11 @@ CONTAINS
           !below term
           IF(j .NE. 1)THEN
             amatrix(1,cell_idx)=amatrix(1,cell_idx)&
-              +2.0D0*(assm_pitch/assm_xs(assm_map(j,i))%D(g)&
-              +assm_pitch/assm_xs(assm_map(j-1,i))%D(g))**(-1)-dtilde_y(i,j,g)
+              +2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
+              +assm_pitch/assm_xs(assm_map(i,j-1))%D(g))**(-1)-dtilde_y(i,j,g)
             amatrix(4,cell_idx)=amatrix(4,cell_idx)&
-              -2.0D0*(assm_pitch/assm_xs(assm_map(j,i))%D(g)&
-              +assm_pitch/assm_xs(assm_map(j-1,i))%D(g))**(-1)-dtilde_y(i,j,g)
+              -2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
+              +assm_pitch/assm_xs(assm_map(i,j-1))%D(g))**(-1)-dtilde_y(i,j,g)
           ELSE
             !boundary condition specified by the dtilde factor computation in the polynomial portion
             amatrix(1,cell_idx)=amatrix(1,cell_idx)+dtilde_y(i,j,g)
@@ -295,11 +295,11 @@ CONTAINS
           !above term
           IF(j .NE. core_y_size)THEN
             amatrix(1,cell_idx)=amatrix(1,cell_idx)&
-              +2.0D0*(assm_pitch/assm_xs(assm_map(j,i))%D(g)&
-              +assm_pitch/assm_xs(assm_map(j+1,i))%D(g))**(-1)+dtilde_y(i,j+1,g)
+              +2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
+              +assm_pitch/assm_xs(assm_map(i,j+1))%D(g))**(-1)+dtilde_y(i,j+1,g)
             amatrix(5,cell_idx)=amatrix(5,cell_idx)&
-              -2.0D0*(assm_pitch/assm_xs(assm_map(j,i))%D(g)&
-              +assm_pitch/assm_xs(assm_map(j+1,i))%D(g))**(-1)+dtilde_y(i,j+1,g)
+              -2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
+              +assm_pitch/assm_xs(assm_map(i,j+1))%D(g))**(-1)+dtilde_y(i,j+1,g)
           ELSE
             !boundary condition specified by the dtilde factor computation in the polynomial portion
             amatrix(1,cell_idx)=amatrix(1,cell_idx)+dtilde_y(i,j+1,g)
@@ -415,7 +415,7 @@ CONTAINS
     DO j=1,core_y_size
       DO i=1,core_x_size
         !compute fission source for this cell
-        loc_id=assm_map(j,i)
+        loc_id=assm_map(i,j)
         fiss_src=0.0D0
         DO gp=1,num_eg
           fiss_src=fiss_src+xflux(i,j,gp)*assm_xs(loc_id)%nusigma_f(gp)
@@ -442,7 +442,7 @@ CONTAINS
     DO gp=1,num_eg
       DO j=1,core_y_size
         DO i=1,core_x_size
-          loc_id=assm_map(j,i)
+          loc_id=assm_map(i,j)
           fiss_src=fiss_src+xflux(i,j,gp)*assm_xs(loc_id)%nusigma_f(gp)
         ENDDO ! i = 1,core_x_size
       ENDDO ! j = 1,core_y_size
@@ -471,8 +471,8 @@ CONTAINS
           ELSEIF(i .EQ. core_x_size+1)THEN
             j_x(i,j,g)=dtilde_x(i,j,g)*xflux(i-1,j,g)
           ELSE !not a boundary
-            j_x(i,j,g)=2.0D0*(assm_pitch/assm_xs(assm_map(j,i-1))%D(g)&
-              +assm_pitch/assm_xs(assm_map(j,i))%D(g))*(xflux(i-1,j,g)-xflux(i,j,g))&
+            j_x(i,j,g)=2.0D0*(assm_pitch/assm_xs(assm_map(i-1,j))%D(g)&
+              +assm_pitch/assm_xs(assm_map(i,j))%D(g))*(xflux(i-1,j,g)-xflux(i,j,g))&
               +dtilde_x(i,j,g)*(xflux(i-1,j,g)+xflux(i,j,g))
           ENDIF
         ENDDO
@@ -488,8 +488,8 @@ CONTAINS
           ELSEIF(j .EQ. core_y_size+1)THEN
             j_y(i,j,g)=dtilde_y(i,j,g)*xflux(i,j-1,g)
           ELSE !not a boundary
-            j_y(i,j,g)=2.0D0*(assm_pitch/assm_xs(assm_map(j-1,i))%D(g)&
-              +assm_pitch/assm_xs(assm_map(j,i))%D(g))*(xflux(i,j-1,g)-xflux(i,j,g))&
+            j_y(i,j,g)=2.0D0*(assm_pitch/assm_xs(assm_map(i,j-1))%D(g)&
+              +assm_pitch/assm_xs(assm_map(i,j))%D(g))*(xflux(i,j-1,g)-xflux(i,j,g))&
               +dtilde_y(i,j,g)*(xflux(i,j-1,g)+xflux(i,j,g))
           ENDIF
         ENDDO

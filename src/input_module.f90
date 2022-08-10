@@ -459,6 +459,7 @@ CONTAINS
     !allocate the assembly map based upon problem size and symmetry
     !this is the actual problem we will solve, and remember again that the core is assumed square
     ! TODO need to implement ragged core
+    !TODO need to make sure I can do this after getting the symmetry and size
     SELECTCASE(prob_sym)
       CASE('full')
         core_x_size=core_size
@@ -472,7 +473,7 @@ CONTAINS
       CASE DEFAULT
         CALL fatal_error(TRIM(prob_sym)//' is not a valid symmetry')
     ENDSELECT
-    ALLOCATE(assm_map(core_y_size,core_x_size))
+    ALLOCATE(assm_map(core_x_size,core_y_size))
     assm_map=0
 
     !read in the core map
@@ -482,7 +483,7 @@ CONTAINS
       !parse to get all data on line
       CALL parse(t_char,' ',words,nwords)
       DO j=1,nwords
-        READ(words(j),*)assm_map(i,j)
+        READ(words(j),*)assm_map(j,i)
       ENDDO
     ENDDO
 
@@ -491,13 +492,13 @@ CONTAINS
       oct_sym=0
       DO i=1,core_y_size
         DO j=i+1,core_x_size
-          oct_sym=oct_sym+ABS(assm_map(i,j))
+          oct_sym=oct_sym+ABS(assm_map(j,i))
         ENDDO
       ENDDO
       IF(oct_sym .EQ. 0)THEN
         DO i=1,core_y_size
           DO j=i+1,core_x_size
-            assm_map(i,j)=assm_map(j,i)
+            assm_map(j,i)=assm_map(i,j)
           ENDDO
         ENDDO
       ENDIF
