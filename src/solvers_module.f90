@@ -10,9 +10,16 @@ MODULE solvers_module
   PRIVATE
   PUBLIC :: solver,solver_init
 
-  CHARACTER(*), PARAMETER :: inner_solve_method = 'dgesv'
+  CHARACTER(*), PARAMETER :: inner_solve_method = 'sor'
 
 CONTAINS
+
+  INTEGER PURE FUNCTION calc_idx(i, j, g)
+    USE globals, ONLY : core_x_size, core_y_size
+    INTEGER, INTENT(IN) :: i, j, g
+    calc_idx=(g-1)*core_y_size*core_x_size+(j-1)*core_x_size+i
+    RETURN
+  ENDFUNCTION calc_idx
 
 !---------------------------------------------------------------------------------------------------
 !> @brief This subroutine solves the nodal problem
@@ -63,24 +70,62 @@ CONTAINS
 !> @param tol_inner_x -
 !> @param tol_inner_maxit -
 !>
-  SUBROUTINE sor(aa, b, x, omega, tol_inner_x, tol_inner_maxit)
+  SUBROUTINE sor(aa, b, flux, rank, omega, tol_inner_x, tol_inner_maxit)
     USE precisions, ONLY : ki4, kr8
+    USE globals, ONLY : core_x_size, core_y_size, num_eg, print_log
     IMPLICIT NONE
     ! designed for a 5-stripe matrix with the diagonal in the fifth position
-    real(kr8), intent(in) :: aa(:,:) ! (5, rank)
-    real(kr8), intent(in) :: b(:)    ! (rank)
-    real(kr8), intent(inout) :: x(:)    ! (rank)
-    real(kr8), intent(in) :: omega
-    real(kr8), intent(in) :: tol_inner_x
-    integer(ki4), intent(in) :: tol_inner_maxit
+    REAL(kr8),    INTENT(in) :: aa(:,:) ! (5, rank)
+    REAL(kr8),    INTENT(in) :: b(:)    ! (rank)
+    REAL(kr8),    INTENT(inout) :: flux(:,:,:)    ! (rank)
+    INTEGER(ki4), INTENT(IN) :: rank
+    REAL(kr8),    INTENT(in) :: omega
+    REAL(kr8),    INTENT(in) :: tol_inner_x
+    INTEGER(ki4), INTENT(in) :: tol_inner_maxit
 
-    integer(ki4) :: i, iter, rank
+    INTEGER(ki4) :: i, j, g, iter
+    INTEGER(ki4) :: cell_idx
+    REAL(kr8)    :: zum, xdif, xmax
+    REAL(kr8)    :: fold, fnew
+    REAL(kr8)    :: converge
 
-    rank=SIZE(b)
+    ! TODO implement gg array so i dont have to track boundaries everywhere
 
     DO iter = 1,tol_inner_maxit
-    ENDDO
+      xdif = 0d0
+      xmax = 0d0
+      DO g = 1,num_eg
+        DO j = 1,core_y_size
+          DO i = 1,core_x_size
 
+            zum = 0d0
+            cell_idx=calc_idx(i,j,g)
+
+            ! west
+            IF (i .NE. 1)           zum = zum + aa(2,cell_idx)*flux(i-1,j,g)
+            ! east
+            IF (i .NE. core_x_size) zum = zum + aa(3,cell_idx)*flux(i+1,j,g)
+            ! south
+            IF (j .NE. 1)           zum = zum + aa(4,cell_idx)*flux(i,j-1,g)
+            ! north
+            IF (i .NE. core_y_size) zum = zum + aa(5,cell_idx)*flux(i,j+1,g)
+
+            zum  = (b(cell_idx) - zum) / aa(1,cell_idx)
+            fold = flux(i,j,g)
+            fnew = fold + omega*(zum - fold)
+            xdif = MAX(xdif, ABS(fnew-fold))
+            xmax = MAX(xmax, ABS(fnew))
+            
+            flux(i,j,g) = fnew
+
+          ENDDO ! i = 1,core_x_size
+        ENDDO ! j = 1,core_y_size
+      ENDDO ! g = 1,num_eg
+      converge = xdif/xmax
+      IF (converge < tol_inner_x) RETURN
+    ENDDO ! iter = 1,toL_inner_maxit
+
+    CALL print_log('WARNING: SOR not converged')
   ENDSUBROUTINE sor
 
 !---------------------------------------------------------------------------------------------------
@@ -118,6 +163,8 @@ CONTAINS
 
     CALL print_log('Iter | Keff     | Conv_Keff | Conv_Flux')
 
+    xflux = 1d0
+
     conv_xflux = 1d2*tol_xflux + 1d0
     conv_xkeff = 1d2*tol_xkeff + 1d0
     flux_old=xflux
@@ -129,7 +176,7 @@ CONTAINS
       CALL build_bvec(bvec)
 
       ! TODO implement inner tolerances
-      CALL inner_solve(inner_solve_method, prob_size, 1d-10, 1000, &
+      CALL inner_solve(inner_solve_method, prob_size, 1d-10, 10000, &
                        amat, bvec, xflux)
 
       CALL calc_fiss_src_sum(fiss_src_sum(2))
@@ -183,7 +230,7 @@ CONTAINS
     DO g=1,num_eg
       DO j=1,core_y_size
         DO i=1,core_x_size
-          cell_idx=(g-1)*core_y_size*core_x_size+(j-1)*core_x_size+i
+          cell_idx=calc_idx(i,j,g)
           !total xs term for the base of the A matrix diagonal
           amatrix(1,cell_idx)=assm_xs(assm_map(j,i))%sigma_t(g)*assm_pitch
           !left term
@@ -250,38 +297,36 @@ CONTAINS
 
     dense = 0d0
 
-    ! TODO use sparse indices
-
     DO g = 1,num_eg
       DO j = 1,core_y_size
         DO i = 1,core_x_size
           
-          cell_idx=(g-1)*core_y_size*core_x_size+(j-1)*core_x_size+i
+          cell_idx=calc_idx(i,j,g)
 
           ! self
           dense(cell_idx,cell_idx) = stripe(1,cell_idx)
 
           ! west
           IF (i .NE. 1) THEN
-            neigh_idx=(g-1)*core_y_size*core_x_size+(j-1)*core_x_size+i-1
+            neigh_idx=calc_idx(i-1,j,g)
             dense(cell_idx,neigh_idx) = stripe(2,cell_idx)
           ENDIF
 
           ! east
           IF (i .NE. core_x_size) THEN
-            neigh_idx=(g-1)*core_y_size*core_x_size+(j-1)*core_x_size+i+1
+            neigh_idx=calc_idx(i+1,j,g)
             dense(cell_idx,neigh_idx) = stripe(3,cell_idx)
           ENDIF
 
           ! south
           IF (j .NE. 1) THEN
-            neigh_idx=(g-1)*core_y_size*core_x_size+(j-2)*core_x_size+i
+            neigh_idx=calc_idx(i,j-1,g)
             dense(cell_idx,neigh_idx) = stripe(4,cell_idx)
           ENDIF
 
           ! north
           IF (j .NE. core_y_size) THEN
-            neigh_idx=(g-1)*core_y_size*core_x_size+(j)*core_x_size+i
+            neigh_idx=calc_idx(i,j+1,g)
             dense(cell_idx,neigh_idx) = stripe(5,cell_idx)
           ENDIF
 
@@ -328,6 +373,9 @@ CONTAINS
           ENDDO
         ENDDO
         DEALLOCATE(atemp, ipiv)
+      CASE ('sor')
+        ! TODO set omega better than this
+        CALL sor(amat, bvec, xflux, rank, 1.2d0, tol_inner_x, tol_inner_maxit)
       CASE DEFAULT
         call fatal_error('selected inner_solve method not implemented')
     ENDSELECT
