@@ -10,7 +10,7 @@ MODULE solvers_module
   PRIVATE
   PUBLIC :: solver,solver_init
 
-  CHARACTER(*), PARAMETER :: inner_solve_method = 'dgesv'
+  CHARACTER(*), PARAMETER :: inner_solve_method = 'sor'
 
 CONTAINS
 
@@ -127,7 +127,7 @@ CONTAINS
             ! south
             IF (j .NE. 1)           zum = zum + aa(4,cell_idx)*flux(i,j-1,g)
             ! north
-            IF (i .NE. core_y_size) zum = zum + aa(5,cell_idx)*flux(i,j+1,g)
+            IF (j .NE. core_y_size) zum = zum + aa(5,cell_idx)*flux(i,j+1,g)
 
             zum  = (b(cell_idx) - zum) / aa(1,cell_idx)
             fold = flux(i,j,g)
@@ -222,7 +222,7 @@ CONTAINS
 
       CALL print_log(TRIM(str(iter,4))//'   '//TRIM(str(xkeff,6,'F'))//'   '//TRIM(str(conv_xkeff,2)) &
         //'   '//TRIM(str(conv_xflux,2)))
-      CALL comp_dtilde()
+      !CALL comp_dtilde()
 
       IF ((conv_xflux < tol_xflux) .AND. (conv_xkeff < tol_xkeff)) EXIT
 
@@ -450,14 +450,15 @@ CONTAINS
   ENDSUBROUTINE calc_fiss_src_sum
 
   SUBROUTINE comp_dtilde()
-    CALL comp_s()
+    REAL(kr8) :: s_bar_x(core_x_size,core_y_size,num_eg),s_bar_y(core_x_size,core_y_size,num_eg)
+    CALL comp_s(s_bar_x,s_bar_y)
     STOP 'comp_dtilde not yet complete'
   ENDSUBROUTINE comp_dtilde
 
-  SUBROUTINE comp_s()
+  SUBROUTINE comp_s(s_bar_x,s_bar_y)
+    REAL(kr8),INTENT(OUT) :: s_bar_x(:,:,:),s_bar_y(:,:,:)
     REAL(kr8) :: j_x(core_x_size+1,core_y_size,num_eg),j_y(core_x_size,core_y_size+1,num_eg)
     REAL(kr8) :: l_bar_x(core_x_size,core_y_size,num_eg),l_bar_y(core_x_size,core_y_size,num_eg)
-    REAL(kr8) :: s_bar_x(core_x_size,core_y_size,num_eg),s_bar_y(core_x_size,core_y_size,num_eg)
     INTEGER :: i,j,g
 
     !compute x direction currents at each face
@@ -551,15 +552,15 @@ CONTAINS
       ENDDO
     ENDDO
 
-    !!x direction l
-    !write(*,*)'s_x'
-    !DO j=1,core_y_size
-    ! WRITE(*,'(10000ES16.8)')s_bar_x(:,j,1)
-    !ENDDO
-    !!y direction l
-    !write(*,*)'s_y'
-    !DO j=1,core_y_size
-    ! WRITE(*,'(10000ES16.8)')s_bar_y(:,j,1)
-    !ENDDO
+    !x direction l
+    write(*,*)'s_x'
+    DO j=1,core_y_size
+      WRITE(*,'(10000ES16.8)')s_bar_x(:,j,1)
+    ENDDO
+    !y direction l
+    write(*,*)'s_y'
+    DO j=1,core_y_size
+      WRITE(*,'(10000ES16.8)')s_bar_y(:,j,1)
+    ENDDO
   ENDSUBROUTINE comp_s
 ENDMODULE solvers_module
