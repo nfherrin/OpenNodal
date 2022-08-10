@@ -27,7 +27,7 @@ CONTAINS
   SUBROUTINE solver_init()
     INTEGER :: i,ii,j,jj,g,ip,jp,temp_map(core_y_size,core_x_size)
 
-    IF(nsplit .NE. 1)THEN
+    IF(nsplit .GT. 1)THEN
       !in this case we are splitting the system and need to remake the assemply map
       !and recompute the core_x_size and core_y_size
       temp_map=assm_map
@@ -201,7 +201,7 @@ CONTAINS
       CALL build_bvec(bvec)
 
       ! TODO implement inner tolerances
-      CALL inner_solve(inner_solve_method, prob_size, 1d-10, 10000, &
+      CALL inner_solve(inner_solve_method, prob_size, MIN(tol_xflux,tol_xkeff), 10000, &
                        amat, bvec, xflux)
 
       CALL calc_fiss_src_sum(fiss_src_sum(2))
