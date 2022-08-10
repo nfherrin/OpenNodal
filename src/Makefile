@@ -10,7 +10,7 @@ coverage: TYPE := _Coverage
 
 all:      OPT := -O3
 debug:    OPT := -O0 -g -fbacktrace -ffpe-trap=zero,overflow,underflow
-catch:    OPT := -O0 -g -Wall -W -Wsurprising -Werror -Wextra
+catch:    OPT := -O0 -g -Wall -W -Wsurprising -Wextra #-Werror
 coverage: OPT := -O0 -g --coverage
 
 #-----------------------------------------------------------------------------------
@@ -28,7 +28,8 @@ SRC := main.f90 \
 	   xs_types.f90 \
 	   input_module.f90 \
 	   output_module.f90 \
-	   solvers_module.f90
+	   solvers_module.f90 \
+	   linalg_module.f90
 
 OBJ := $(SRC:.f90=.o)
 
@@ -79,6 +80,8 @@ main.o : errors_module.o globals.o input_module.o output_module.o \
 		solvers_module.o
 output_module.o : globals.o
 precisions.o : 
-solvers_module.o : globals.o errors_module.o precisions.o string_module.o
+solvers_module.o : globals.o errors_module.o precisions.o string_module.o \
+		           linalg_module.o
 string_module.o : precisions.o 
 xs_types.o : precisions.o
+linalg_module.o : precisions.o
