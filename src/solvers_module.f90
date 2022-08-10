@@ -172,7 +172,7 @@ CONTAINS
   !amatrix builder
   SUBROUTINE build_amatrix(amatrix)
     REAL(kr8), INTENT(OUT) :: amatrix(:,:)
-    INTEGER(ki4) :: g,j,i,cell_idx,neigh_idx
+    INTEGER(ki4) :: g,j,i,cell_idx
 
     ! (1   , 2   , 3    , 4     , 5   )
     ! (diag, left, right, below, above)
@@ -188,7 +188,6 @@ CONTAINS
           amatrix(1,cell_idx)=assm_xs(assm_map(j,i))%sigma_t(g)*assm_pitch
           !left term
           IF(i .NE. 1)THEN
-            neigh_idx=(g-1)*core_y_size*core_x_size+(j-1)*core_x_size+i-1
             amatrix(1,cell_idx)=amatrix(1,cell_idx)&
               +2.0D0*(assm_pitch/assm_xs(assm_map(j,i))%D(g)&
               +assm_pitch/assm_xs(assm_map(j,i-1))%D(g))**(-1)-dtilde_x(i,j,g)
@@ -201,7 +200,6 @@ CONTAINS
           ENDIF
           !right term
           IF(i .NE. core_x_size)THEN
-            neigh_idx=(g-1)*core_y_size*core_x_size+(j-1)*core_x_size+i+1
             amatrix(1,cell_idx)=amatrix(1,cell_idx)&
               +2.0D0*(assm_pitch/assm_xs(assm_map(j,i))%D(g)&
               +assm_pitch/assm_xs(assm_map(j,i+1))%D(g))**(-1)+dtilde_x(i+1,j,g)
@@ -214,7 +212,6 @@ CONTAINS
           ENDIF
           !below term
           IF(j .NE. 1)THEN
-            neigh_idx=(g-1)*core_y_size*core_x_size+(j-2)*core_x_size+i
             amatrix(1,cell_idx)=amatrix(1,cell_idx)&
               +2.0D0*(assm_pitch/assm_xs(assm_map(j,i))%D(g)&
               +assm_pitch/assm_xs(assm_map(j-1,i))%D(g))**(-1)-dtilde_y(i,j,g)
@@ -227,7 +224,6 @@ CONTAINS
           ENDIF
           !above term
           IF(j .NE. core_y_size)THEN
-            neigh_idx=(g-1)*core_y_size*core_x_size+(j)*core_x_size+i
             amatrix(1,cell_idx)=amatrix(1,cell_idx)&
               +2.0D0*(assm_pitch/assm_xs(assm_map(j,i))%D(g)&
               +assm_pitch/assm_xs(assm_map(j+1,i))%D(g))**(-1)+dtilde_y(i,j+1,g)
