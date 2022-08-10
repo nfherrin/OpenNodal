@@ -228,6 +228,10 @@ CONTAINS
 
     ENDDO ! iter = 1,tol_max_iter
 
+    DO j=1,core_y_size
+      write(*,'(10000ES16.8)')xflux(:,j,1)
+    ENDDO
+
     DEALLOCATE(amat, flux_old, bvec)
 
     CALL print_log('ITERATIONS FINISHED')
@@ -453,6 +457,7 @@ CONTAINS
   SUBROUTINE comp_s()
     REAL(kr8) :: j_x(core_x_size+1,core_y_size,num_eg),j_y(core_x_size,core_y_size+1,num_eg)
     REAL(kr8) :: l_bar_x(core_x_size,core_y_size,num_eg),l_bar_y(core_x_size,core_y_size,num_eg)
+    REAL(kr8) :: s_bar_x(core_x_size,core_y_size,num_eg),s_bar_y(core_x_size,core_y_size,num_eg)
     INTEGER :: i,j,g
 
     !compute x direction currents at each face
@@ -490,22 +495,18 @@ CONTAINS
       ENDDO
     ENDDO
 
-    DO j=1,core_y_size
-      WRITE(*,'(10000ES16.8)')xflux(:,j,1)
-    ENDDO
-
     !!x direction currents
     !write(*,*)'j_x'
     !DO j=1,core_y_size
-    ! WRITE(*,'(10000ES16.8)')j_x(:,j,1)
+    !  WRITE(*,'(10000ES16.8)')j_x(:,j,1)
     !ENDDO
     !!y direction currents
     !write(*,*)'j_y'
     !DO j=1,core_y_size+1
-    ! WRITE(*,'(10000ES16.8)')j_y(:,j,1)
+    !  WRITE(*,'(10000ES16.8)')j_y(:,j,1)
     !ENDDO
 
-    !compute l_x values
+    !compute l_bar_x values
     DO i=1,core_x_size
       DO j=1,core_y_size
         DO g=1,num_eg
@@ -513,7 +514,7 @@ CONTAINS
         ENDDO
       ENDDO
     ENDDO
-    !compute l_y values
+    !compute l_bar_y values
     DO i=1,core_x_size
       DO j=1,core_y_size
         DO g=1,num_eg
@@ -525,12 +526,40 @@ CONTAINS
     !!x direction l
     !write(*,*)'l_x'
     !DO j=1,core_y_size
-    !  WRITE(*,'(10000ES16.8)')l_x(:,j,1)
+    ! WRITE(*,'(10000ES16.8)')l_bar_x(:,j,1)
     !ENDDO
     !!y direction l
     !write(*,*)'l_y'
     !DO j=1,core_y_size
-    !  WRITE(*,'(10000ES16.8)')l_y(:,j,1)
+    ! WRITE(*,'(10000ES16.8)')l_bar_y(:,j,1)
+    !ENDDO
+
+    !compute s_bar_x values
+    DO i=1,core_x_size
+      DO j=1,core_y_size
+        DO g=1,num_eg
+          s_bar_x(i,j,g)=l_bar_y(i,j,g)/assm_pitch
+        ENDDO
+      ENDDO
+    ENDDO
+    !compute s_bar_y values
+    DO i=1,core_x_size
+      DO j=1,core_y_size
+        DO g=1,num_eg
+          s_bar_y(i,j,g)=l_bar_x(i,j,g)/assm_pitch
+        ENDDO
+      ENDDO
+    ENDDO
+
+    !!x direction l
+    !write(*,*)'s_x'
+    !DO j=1,core_y_size
+    ! WRITE(*,'(10000ES16.8)')s_bar_x(:,j,1)
+    !ENDDO
+    !!y direction l
+    !write(*,*)'s_y'
+    !DO j=1,core_y_size
+    ! WRITE(*,'(10000ES16.8)')s_bar_y(:,j,1)
     !ENDDO
   ENDSUBROUTINE comp_s
 ENDMODULE solvers_module
