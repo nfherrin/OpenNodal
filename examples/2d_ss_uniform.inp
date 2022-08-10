@@ -16,7 +16,7 @@ OpenNodal_INP_V1
     2 2 2 2 2
     2 2 2 2 2
 
-  nsplit 4
+  nsplit 1
 
 [MATERIAL]
   xs_file uniform.xs

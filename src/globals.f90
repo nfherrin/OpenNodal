@@ -53,7 +53,7 @@ MODULE globals
 
   ! TODO implement user input
   !>  maximum number of iterations
-  INTEGER(ki4) :: tol_max_iter = 100
+  INTEGER(ki4) :: tol_max_iter = 1000
   !>  keff convergence tolerance
   REAL(kr8) :: tol_xkeff = 1d-6
   !>  flux convergence tolerance
