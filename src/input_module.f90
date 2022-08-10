@@ -214,7 +214,7 @@ CONTAINS
 !> @brief This subroutine reads in the cross sections Version 1
 !>
   SUBROUTINE read_xs_inp_v1()
-    use edits_module, only : edit_xs
+    USE edits_module, ONLY : edit_xs
     CHARACTER(ll_max) :: t_char,words(lp_max)
     INTEGER(ki4) :: ios,nwords,num_local_xs,i,j
 

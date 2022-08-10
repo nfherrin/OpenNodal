@@ -8,7 +8,7 @@ PROGRAM opennodal
   USE input_module
   USE output_module
   USE solvers_module
-  USE ISO_FORTRAN_ENV
+  USE, INTRINSIC :: ISO_FORTRAN_ENV
   IMPLICIT NONE
 
     !standard output
