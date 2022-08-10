@@ -61,27 +61,29 @@ CONTAINS
     dtilde_y=0.0
     !set initial CMFD boundary conditions for dtilde
     DO g=1,num_eg
-      DO i=1,core_x_size
-        IF(prob_sym .EQ. 'full' .OR. prob_sym .EQ. 'half')THEN
-          !vacuum on all sides or right and top/bot sides
-          dtilde_y(i,1,g)=0.5d0
-          dtilde_y(i,core_y_size+1,g)=0.5d0
-        ELSEIF(prob_sym .EQ. 'qtr')THEN
-          !vacuum on left and bot sides
-          dtilde_y(i,core_y_size+1,g)=0.5d0
-        ENDIF
+      DO i=1,core_y_size
+        SELECT CASE(prob_sym)
+          CASE('full') !vacuum on all sides
+            dtilde_x(1,i,g)=0.5d0
+            dtilde_x(core_x_size+1,i,g)=0.5d0
+          CASE('qtr','half') !vacuum on left and bot sides or on left bot and top sides
+            dtilde_x(core_x_size+1,i,g)=0.5d0
+          CASE DEFAULT
+            CALL fatal_error('Invalid symmetry option: '//TRIM(ADJUSTL(prob_sym)))
+        ENDSELECT
       ENDDO
     ENDDO
     DO g=1,num_eg
-      DO i=1,core_y_size
-        IF(prob_sym .EQ. 'full')THEN
-          !vacuum on all sides
-          dtilde_x(1,i,g)=0.5d0
-          dtilde_x(core_x_size+1,i,g)=0.5d0
-        ELSEIF(prob_sym .EQ. 'qtr' .OR. prob_sym .EQ. 'half')THEN
-          !vacuum on left and bot sides or on left bot and top sides
-          dtilde_x(core_x_size+1,i,g)=0.5d0
-        ENDIF
+      DO i=1,core_x_size
+        SELECT CASE(prob_sym)
+          CASE('full','half') !vacuum on all sides or right and top/bot sides
+            dtilde_y(i,1,g)=0.5d0
+            dtilde_y(i,core_y_size+1,g)=0.5d0
+          CASE('qtr')!vacuum on left and bot sides
+            dtilde_y(i,core_y_size+1,g)=0.5d0
+          CASE DEFAULT
+            CALL fatal_error('Invalid symmetry option: '//TRIM(ADJUSTL(prob_sym)))
+        ENDSELECT
       ENDDO
     ENDDO
   ENDSUBROUTINE solver_init
@@ -452,7 +454,87 @@ CONTAINS
   ENDSUBROUTINE calc_fiss_src_sum
 
   SUBROUTINE comp_dtilde()
-    !STOP 'comp_dtilde not yet complete'
+    CALL comp_s()
+    STOP 'comp_dtilde not yet complete'
   ENDSUBROUTINE comp_dtilde
 
+  SUBROUTINE comp_s()
+    REAL(kr8) :: j_x(core_x_size+1,core_y_size,num_eg),j_y(core_x_size,core_y_size+1,num_eg)
+    REAL(kr8) :: l_x(core_x_size,core_y_size,num_eg),l_y(core_x_size,core_y_size,num_eg)
+    INTEGER :: i,j,g
+
+    !compute x direction currents at each face
+    j_x=0.0D0
+    DO i=1,core_x_size+1
+      DO j=1,core_y_size
+        DO g=1,num_eg
+          IF(i .EQ. 1)THEN
+            j_x(i,j,g)=-dtilde_x(i,j,g)*xflux(i,j,g)
+          ELSEIF(i .EQ. core_x_size+1)THEN
+            j_x(i,j,g)=dtilde_x(i,j,g)*xflux(i-1,j,g)
+          ELSE !not a boundary
+            j_x(i,j,g)=2.0D0*(assm_pitch/assm_xs(assm_map(j,i-1))%D(g)&
+              +assm_pitch/assm_xs(assm_map(j,i))%D(g))*(xflux(i-1,j,g)-xflux(i,j,g))&
+              +dtilde_x(i,j,g)*(xflux(i-1,j,g)+xflux(i,j,g))
+          ENDIF
+        ENDDO
+      ENDDO
+    ENDDO
+    !compute y direction currents at each face
+    j_y=0.0D0
+    DO i=1,core_x_size
+      DO j=1,core_y_size+1
+        DO g=1,num_eg
+          IF(j .EQ. 1)THEN
+            j_y(i,j,g)=-dtilde_y(i,j,g)*xflux(i,j,g)
+          ELSEIF(j .EQ. core_y_size+1)THEN
+            j_y(i,j,g)=dtilde_y(i,j,g)*xflux(i,j-1,g)
+          ELSE !not a boundary
+            j_y(i,j,g)=2.0D0*(assm_pitch/assm_xs(assm_map(j-1,i))%D(g)&
+              +assm_pitch/assm_xs(assm_map(j,i))%D(g))*(xflux(i,j-1,g)-xflux(i,j,g))&
+              +dtilde_y(i,j,g)*(xflux(i,j-1,g)+xflux(i,j,g))
+          ENDIF
+        ENDDO
+      ENDDO
+    ENDDO
+
+    !!x direction currents
+    !write(*,*)'j_x'
+    !DO j=1,core_y_size
+    !  WRITE(*,'(10000ES16.8)')j_x(:,j,1)
+    !ENDDO
+    !!y direction currents
+    !write(*,*)'j_y'
+    !DO j=1,core_y_size+1
+    !  WRITE(*,'(10000ES16.8)')j_y(:,j,1)
+    !ENDDO
+
+    !compute l_x values
+    DO i=1,core_x_size
+      DO j=1,core_y_size
+        DO g=1,num_eg
+          l_x(i,j,g)=(j_x(i+1,j,g)-j_x(i,j,g))/assm_pitch
+        ENDDO
+      ENDDO
+    ENDDO
+    !compute l_y values
+    DO i=1,core_x_size
+      DO j=1,core_y_size
+        DO g=1,num_eg
+          l_y(i,j,g)=(j_y(i,j+1,g)-j_y(i,j,g))/assm_pitch
+        ENDDO
+      ENDDO
+    ENDDO
+
+    !!x direction l
+    !write(*,*)'l_x'
+    !DO j=1,core_y_size
+    !  WRITE(*,'(10000ES16.8)')l_x(:,j,1)
+    !ENDDO
+    !!y direction l
+    !write(*,*)'l_y'
+    !DO j=1,core_y_size
+    !  WRITE(*,'(10000ES16.8)')l_y(:,j,1)
+    !ENDDO
+  ENDSUBROUTINE comp_s
 ENDMODULE solvers_module
