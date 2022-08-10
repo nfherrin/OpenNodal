@@ -1,6 +1,10 @@
 OpenNodal_INP_V1
-[CASEID]
+[CASE_DETAILS]
   title 'Steady state 2D Uniform Core'
+  nsplit 1
+  k_eps 1.0D-10
+  phi_eps 1.0D-10
+  max_its 10000
 
 [CORE]
   dim 2D
@@ -15,8 +19,6 @@ OpenNodal_INP_V1
     2 2 2 2 2
     2 2 2 2 2
     2 2 2 2 2
-
-  nsplit 1
 
 [MATERIAL]
   xs_file uniform.xs

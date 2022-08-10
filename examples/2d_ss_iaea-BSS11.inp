@@ -1,5 +1,5 @@
 OpenNodal_INP_V1
-[CASEID]
+[CASE_DETAILS]
   title 'Steady state IAEA 2D benchmark problem BSS-11 from ANL-7416'
 
 [CORE]

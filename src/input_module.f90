@@ -139,17 +139,29 @@ CONTAINS
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !data for caseid block
     i=1
-    blocks(i)%bname='[CASEID]'
-    blocks(i)%num_cards=1
+    blocks(i)%bname='[CASE_DETAILS]'
+    blocks(i)%num_cards=5
     ALLOCATE(blocks(i)%cards(blocks(i)%num_cards))
     j=1
     blocks(i)%cards(j)%cname='title'
     blocks(i)%cards(j)%getcard=>get_title
+    j=2
+    blocks(i)%cards(j)%cname='nsplit'
+    blocks(i)%cards(j)%getcard=>get_nsplit
+    j=3
+    blocks(i)%cards(j)%cname='k_eps'
+    blocks(i)%cards(j)%getcard=>get_k_eps
+    j=4
+    blocks(i)%cards(j)%cname='phi_eps'
+    blocks(i)%cards(j)%getcard=>get_phi_eps
+    j=5
+    blocks(i)%cards(j)%cname='max_its'
+    blocks(i)%cards(j)%getcard=>get_max_its
 
     !data for CORE block
     i=2
     blocks(i)%bname='[CORE]'
-    blocks(i)%num_cards=6
+    blocks(i)%num_cards=5
     ALLOCATE(blocks(i)%cards(blocks(i)%num_cards))
     j=1
     blocks(i)%cards(j)%cname='dim'
@@ -166,9 +178,6 @@ CONTAINS
     j=5
     blocks(i)%cards(j)%cname='assm_map'
     blocks(i)%cards(j)%getcard=>get_assm_map
-    j=6
-    blocks(i)%cards(j)%cname='nsplit'
-    blocks(i)%cards(j)%getcard=>get_nsplit
 
     !data for MATERIAL block
     i=3
@@ -494,9 +503,8 @@ CONTAINS
       ENDIF
     ENDIF
   ENDSUBROUTINE get_assm_map
-
 !---------------------------------------------------------------------------------------------------
-!> @brief Subroutine to read in the core assembly map
+!> @brief Subroutine to read in the nsplit option
 !> @param this_card - The card we're retrieving data for
 !> @param wwords - The string from which the data is being retrieved
 !>
@@ -514,6 +522,66 @@ CONTAINS
     READ(wwords(2),*)nsplit
 
   ENDSUBROUTINE get_nsplit
+
+!---------------------------------------------------------------------------------------------------
+!> @brief Subroutine to read in the keff tolerance
+!> @param this_card - The card we're retrieving data for
+!> @param wwords - The string from which the data is being retrieved
+!>
+  SUBROUTINE get_k_eps(this_card,wwords)
+    CLASS(cardType),INTENT(INOUT) :: this_card
+    CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+
+    INTEGER(ki4) :: nwords
+    CHARACTER(ll_max) :: t_char,words(lp_max)
+    INTEGER(ki4) :: i,ios,j,oct_sym
+
+    wwords(1)=TRIM(wwords(1))
+    CALL print_log(TRIM(this_card%cname)//' card found')
+
+    READ(wwords(2),*)tol_xkeff
+
+  ENDSUBROUTINE get_k_eps
+
+!---------------------------------------------------------------------------------------------------
+!> @brief Subroutine to read in the flux tolerance
+!> @param this_card - The card we're retrieving data for
+!> @param wwords - The string from which the data is being retrieved
+!>
+  SUBROUTINE get_phi_eps(this_card,wwords)
+    CLASS(cardType),INTENT(INOUT) :: this_card
+    CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+
+    INTEGER(ki4) :: nwords
+    CHARACTER(ll_max) :: t_char,words(lp_max)
+    INTEGER(ki4) :: i,ios,j,oct_sym
+
+    wwords(1)=TRIM(wwords(1))
+    CALL print_log(TRIM(this_card%cname)//' card found')
+
+    READ(wwords(2),*)tol_xflux
+
+  ENDSUBROUTINE get_phi_eps
+
+!---------------------------------------------------------------------------------------------------
+!> @brief Subroutine to read in max number of iterations
+!> @param this_card - The card we're retrieving data for
+!> @param wwords - The string from which the data is being retrieved
+!>
+  SUBROUTINE get_max_its(this_card,wwords)
+    CLASS(cardType),INTENT(INOUT) :: this_card
+    CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+
+    INTEGER(ki4) :: nwords
+    CHARACTER(ll_max) :: t_char,words(lp_max)
+    INTEGER(ki4) :: i,ios,j,oct_sym
+
+    wwords(1)=TRIM(wwords(1))
+    CALL print_log(TRIM(this_card%cname)//' card found')
+
+    READ(wwords(2),*)tol_max_iter
+
+  ENDSUBROUTINE get_max_its
 
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the cross section filename
