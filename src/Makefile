@@ -9,7 +9,7 @@ catch:    TYPE := _Catch
 coverage: TYPE := _Coverage
 
 all:      OPT := -O3
-debug:    OPT := -O0 -g -fbacktrace -ffpe-trap=zero,overflow,underflow
+debug:    OPT := -O0 -g -fbacktrace -ffpe-trap=zero,overflow,underflow -fbounds-check
 catch:    OPT := -O0 -g -Wall -W -Wsurprising -Wextra #-Werror
 coverage: OPT := -O0 -g --coverage
 
@@ -79,9 +79,9 @@ input_module.o : globals.o errors_module.o string_module.o edits_module.o
 main.o : errors_module.o globals.o input_module.o output_module.o \
 		solvers_module.o
 output_module.o : globals.o
-precisions.o : 
+precisions.o :
 solvers_module.o : globals.o errors_module.o precisions.o string_module.o \
 		           linalg_module.o
-string_module.o : precisions.o 
+string_module.o : precisions.o
 xs_types.o : precisions.o
 linalg_module.o : precisions.o
