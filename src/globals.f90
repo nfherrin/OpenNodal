@@ -59,6 +59,9 @@ MODULE globals
   !>  flux convergence tolerance
   REAL(kr8) :: tol_xflux = 1d-5
 
+  !> nsplit value, for decomposing nodes into nsplit number of sub-nodes
+  INTEGER(ki4) :: nsplit=1
+
 CONTAINS
 
 !---------------------------------------------------------------------------------------------------

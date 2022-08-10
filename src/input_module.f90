@@ -149,7 +149,7 @@ CONTAINS
     !data for CORE block
     i=2
     blocks(i)%bname='[CORE]'
-    blocks(i)%num_cards=5
+    blocks(i)%num_cards=6
     ALLOCATE(blocks(i)%cards(blocks(i)%num_cards))
     j=1
     blocks(i)%cards(j)%cname='dim'
@@ -166,6 +166,9 @@ CONTAINS
     j=5
     blocks(i)%cards(j)%cname='assm_map'
     blocks(i)%cards(j)%getcard=>get_assm_map
+    j=6
+    blocks(i)%cards(j)%cname='nsplit'
+    blocks(i)%cards(j)%getcard=>get_nsplit
 
     !data for MATERIAL block
     i=3
@@ -491,6 +494,26 @@ CONTAINS
       ENDIF
     ENDIF
   ENDSUBROUTINE get_assm_map
+
+!---------------------------------------------------------------------------------------------------
+!> @brief Subroutine to read in the core assembly map
+!> @param this_card - The card we're retrieving data for
+!> @param wwords - The string from which the data is being retrieved
+!>
+  SUBROUTINE get_nsplit(this_card,wwords)
+    CLASS(cardType),INTENT(INOUT) :: this_card
+    CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+
+    INTEGER(ki4) :: nwords
+    CHARACTER(ll_max) :: t_char,words(lp_max)
+    INTEGER(ki4) :: i,ios,j,oct_sym
+
+    wwords(1)=TRIM(wwords(1))
+    CALL print_log(TRIM(this_card%cname)//' card found')
+
+    READ(wwords(2),*)nsplit
+
+  ENDSUBROUTINE get_nsplit
 
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the cross section filename
