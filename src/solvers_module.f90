@@ -10,7 +10,7 @@ MODULE solvers_module
   PRIVATE
   PUBLIC :: solver,solver_init
 
-  CHARACTER(*), PARAMETER :: inner_solve_method = 'sor'
+  CHARACTER(*), PARAMETER :: inner_solve_method = 'dgesv'
 
 CONTAINS
 
@@ -60,32 +60,24 @@ CONTAINS
     dtilde_x=0.0
     dtilde_y=0.0
     !set initial CMFD boundary conditions for dtilde
-    DO g=1,num_eg
-      DO i=1,core_y_size
-        SELECT CASE(prob_sym)
-          CASE('full') !vacuum on all sides
-            dtilde_x(1,i,g)=0.5d0
-            dtilde_x(core_x_size+1,i,g)=0.5d0
-          CASE('qtr','half') !vacuum on left and bot sides or on left bot and top sides
-            dtilde_x(core_x_size+1,i,g)=0.5d0
-          CASE DEFAULT
-            CALL fatal_error('Invalid symmetry option: '//TRIM(ADJUSTL(prob_sym)))
-        ENDSELECT
-      ENDDO
-    ENDDO
-    DO g=1,num_eg
-      DO i=1,core_x_size
-        SELECT CASE(prob_sym)
-          CASE('full','half') !vacuum on all sides or right and top/bot sides
-            dtilde_y(i,1,g)=0.5d0
-            dtilde_y(i,core_y_size+1,g)=0.5d0
-          CASE('qtr')!vacuum on left and bot sides
-            dtilde_y(i,core_y_size+1,g)=0.5d0
-          CASE DEFAULT
-            CALL fatal_error('Invalid symmetry option: '//TRIM(ADJUSTL(prob_sym)))
-        ENDSELECT
-      ENDDO
-    ENDDO
+    SELECT CASE(prob_sym)
+      CASE('full') !vacuum on all sides
+        dtilde_x(1,:,:)=0.5d0
+        dtilde_x(core_x_size+1,:,:)=0.5d0
+      CASE('qtr','half') !vacuum on right and bot sides or on right bot and top sides
+        dtilde_x(core_x_size+1,:,:)=0.5d0
+      CASE DEFAULT
+        CALL fatal_error('Invalid symmetry option: '//TRIM(ADJUSTL(prob_sym)))
+    ENDSELECT
+    SELECT CASE(prob_sym)
+      CASE('full','half') !vacuum on all sides or right and top/bot sides
+        dtilde_y(:,1,:)=0.5d0
+        dtilde_y(:,core_y_size+1,:)=0.5d0
+      CASE('qtr')!vacuum on right and bot sides
+        dtilde_y(:,core_y_size+1,:)=0.5d0
+      CASE DEFAULT
+        CALL fatal_error('Invalid symmetry option: '//TRIM(ADJUSTL(prob_sym)))
+    ENDSELECT
   ENDSUBROUTINE solver_init
 !
 !---------------------------------------------------------------------------------------------------
@@ -203,7 +195,7 @@ CONTAINS
       CALL build_bvec(bvec)
 
       ! TODO implement inner tolerances
-      CALL inner_solve(inner_solve_method, prob_size, MIN(tol_xflux,tol_xkeff), 10000, &
+      CALL inner_solve(inner_solve_method, prob_size, 1d-3*MIN(tol_xflux,tol_xkeff), 10000, &
                        amat, bvec, xflux)
 
       CALL calc_fiss_src_sum(fiss_src_sum(2))
@@ -460,7 +452,7 @@ CONTAINS
 
   SUBROUTINE comp_s()
     REAL(kr8) :: j_x(core_x_size+1,core_y_size,num_eg),j_y(core_x_size,core_y_size+1,num_eg)
-    REAL(kr8) :: l_x(core_x_size,core_y_size,num_eg),l_y(core_x_size,core_y_size,num_eg)
+    REAL(kr8) :: l_bar_x(core_x_size,core_y_size,num_eg),l_bar_y(core_x_size,core_y_size,num_eg)
     INTEGER :: i,j,g
 
     !compute x direction currents at each face
@@ -498,22 +490,26 @@ CONTAINS
       ENDDO
     ENDDO
 
+    DO j=1,core_y_size
+      WRITE(*,'(10000ES16.8)')xflux(:,j,1)
+    ENDDO
+
     !!x direction currents
     !write(*,*)'j_x'
     !DO j=1,core_y_size
-    !  WRITE(*,'(10000ES16.8)')j_x(:,j,1)
+    ! WRITE(*,'(10000ES16.8)')j_x(:,j,1)
     !ENDDO
     !!y direction currents
     !write(*,*)'j_y'
     !DO j=1,core_y_size+1
-    !  WRITE(*,'(10000ES16.8)')j_y(:,j,1)
+    ! WRITE(*,'(10000ES16.8)')j_y(:,j,1)
     !ENDDO
 
     !compute l_x values
     DO i=1,core_x_size
       DO j=1,core_y_size
         DO g=1,num_eg
-          l_x(i,j,g)=(j_x(i+1,j,g)-j_x(i,j,g))/assm_pitch
+          l_bar_x(i,j,g)=j_x(i+1,j,g)-j_x(i,j,g)
         ENDDO
       ENDDO
     ENDDO
@@ -521,7 +517,7 @@ CONTAINS
     DO i=1,core_x_size
       DO j=1,core_y_size
         DO g=1,num_eg
-          l_y(i,j,g)=(j_y(i,j+1,g)-j_y(i,j,g))/assm_pitch
+          l_bar_y(i,j,g)=j_y(i,j+1,g)-j_y(i,j,g)
         ENDDO
       ENDDO
     ENDDO
