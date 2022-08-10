@@ -25,7 +25,32 @@ CONTAINS
 !> @brief This subroutine solves the nodal problem
 !>
   SUBROUTINE solver_init()
-    INTEGER :: i,g
+    INTEGER :: i,ii,j,jj,g,ip,jp,temp_map(core_y_size,core_x_size)
+
+    IF(nsplit .NE. 1)THEN
+      !in this case we are splitting the system and need to remake the assemply map
+      !and recompute the core_x_size and core_y_size
+      temp_map=assm_map
+      DEALLOCATE(assm_map)
+      ALLOCATE(assm_map(nsplit*core_y_size,nsplit*core_x_size))
+      assm_map=0
+      jp=0
+      DO j=1,core_y_size
+        DO jj=1,nsplit
+          jp=jp+1
+          ip=0
+          DO i=1,core_x_size
+            DO ii=1,nsplit
+              ip=ip+1
+              assm_map(jp,ip)=temp_map(j,i)
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+      core_x_size=nsplit*core_x_size
+      core_y_size=nsplit*core_y_size
+      assm_pitch=assm_pitch/(nsplit*1.0D0)
+    ENDIF
     xkeff = 1d0
     allocate(xflux(core_x_size,core_y_size,num_eg))
     xflux = 1d0
@@ -115,7 +140,7 @@ CONTAINS
             fnew = fold + omega*(zum - fold)
             xdif = MAX(xdif, ABS(fnew-fold))
             xmax = MAX(xmax, ABS(fnew))
-            
+
             flux(i,j,g) = fnew
 
           ENDDO ! i = 1,core_x_size
@@ -300,7 +325,7 @@ CONTAINS
     DO g = 1,num_eg
       DO j = 1,core_y_size
         DO i = 1,core_x_size
-          
+
           cell_idx=calc_idx(i,j,g)
 
           ! self
