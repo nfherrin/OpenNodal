@@ -1,6 +1,7 @@
 While the listed references provide a complete description of the polynomial nodal equations and the nonlinear iteration procedure, some correlations are implied but not explicitly stated.
 One of these implied values is $\bar{S}$, so a more explicit description is given here.
 
+\section{Explicit Form of $\bar{S}$}
 Fundamental equations given or implied in~\cite{GehinPhD}, \cite{SmithMS}, and~\cite{Smith1983Nonlinear}:
 \[
 l,m,n=\begin{cases}
@@ -34,3 +35,199 @@ So then $\bar{S}$ can be expressed as:
   \bar{S}_{gu}^{lmn}=\frac{1}{h_u^l}\int_{u_l}^{u_{l+1}}\left(\frac{1}{h_v^m}L_{gv}^{mn}(u)+\frac{1}{h_w^n}L_{gw}^{mn}(u)\right)\,du=\frac{1}{h_v^m}\bar{L}_{gv}^{lmn}+\frac{1}{h_w^n}\bar{L}_{gw}^{lmn}
 \]
 Which gives $\bar{S}$ in a form that can now be explicitly computed using flux, $\phi$, for a current, $J$, expressed as a function of $\phi$.
+
+
+\section{Reduced Two Node Problem Equations}
+
+Fundamental equations given or implied in~\cite{GehinPhD}, \cite{SmithMS}, and~\cite{Smith1983Nonlinear}:
+\begin{enumerate}
+    \item Nodal balance equation for node $l-1$:
+        \[
+        6a_{gu2}^{l-1,mn}-\frac{2}{5}a_{gu4}^{l-1,mn}=\sum_{g'=1}^G(\kappa_u^2)_{gg'}^{l-1,mn}\bar{\phi}_{g'}^{l-1,mn}+\frac{(h_u^{l-1})^2}{D_g^{l-1,mn}}\bar{S}_{gu}^{l-1,mn}
+        \]
+    \item First moment equation for node $l-1$:
+        \[
+        \frac{1}{2}a_{gu3}^{l-1,mn}+\frac{1}{12}\sum_{g'=1}^G(\kappa_u^2)_{gg'}^{l-1,mn}\left[a_{g'u1}^{l-1,mn}+\frac{1}{10}a_{g'u3}^{l-1,mn}\right]=-\frac{(h_u^{l-1})^2}{D_g^{l-1,mn}}S_{gu1}^{l-1,mn}
+        \]
+    \item Second moment equation for node $l-1$:
+        \[
+        \frac{1}{5}a_{gu4}^{l-1,mn}+\frac{1}{20}\sum_{g'=1}^G(\kappa_u^2)_{gg'}^{l-1,mn}\left[a_{g'u2}^{l-1,mn}+\frac{1}{35}a_{g'u4}^{l-1,mn}\right]=-\frac{(h_u^{l-1})^2}{D_g^{l-1,mn}}S_{gu2}^{l-1,mn}
+        \]
+    \item Nodal balance equation for node $l$:
+        \[
+        6a_{gu2}^{lmn}-\frac{2}{5}a_{gu4}^{lmn}=\sum_{g'=1}^G(\kappa_u^2)_{gg'}^{lmn}\bar{\phi}_{g'}^{lmn}+\frac{(h_u^{l})^2}{D_g^{lmn}}\bar{S}_{gu}^{lmn}
+        \]
+    \item First moment equation for node $l$:
+        \[
+        \frac{1}{2}a_{gu3}^{lmn}+\frac{1}{12}\sum_{g'=1}^G(\kappa_u^2)_{gg'}^{lmn}\left[a_{g'u1}^{lmn}+\frac{1}{10}a_{g'u3}^{lmn}\right]=-\frac{(h_u^{l})^2}{D_g^{lmn}}S_{gu1}^{lmn}
+        \]
+    \item Second moment equation for node $l$:
+        \[
+        \frac{1}{5}a_{gu4}^{lmn}+\frac{1}{20}\sum_{g'=1}^G(\kappa_u^2)_{gg'}^{lmn}\left[a_{g'u2}^{lmn}+\frac{1}{35}a_{g'u4}^{lmn}\right]=-\frac{(h_u^{l})^2}{D_g^{lmn}}S_{gu2}^{lmn}
+        \]
+    \item Discontinuity at the interface:
+        \[
+        \left(\bar{\phi}_{g}^{l-1,mn}+\frac{1}{2}a_{gu1}^{l-1,mn}+\frac{1}{2}a_{gu2}^{l-1,mn}\right)f_{gu+}^{l-1,mn}=\left(\bar{\phi}_{g}^{lmn}-\frac{1}{2}a_{gu1}^{lmn}+\frac{1}{2}a_{gu2}^{lmn}\right)f_{gu-}^{lmn}
+        \]
+    \item Continuity of the net current at the interface:
+        \begin{multline*}
+        -\frac{D_g^{l-1,mn}}{h_u^{l-1}}\left(a_{gu1}^{l-1,mn}+3a_{gu2}^{l-1,mn}-\frac{1}{2}a_{gu3}^{l-1,mn}-\frac{1}{5}a_{gu4}^{l-1,mn}\right)=\\
+        -\frac{D_g^{lmn}}{h_u^{l}}\left(a_{gu1}^{lmn}-3a_{gu2}^{lmn}-\frac{1}{2}a_{gu3}^{lmn}+\frac{1}{5}a_{gu4}^{lmn}\right)
+        \end{multline*}
+\end{enumerate}
+
+These equations can be solved as is for an $8G\times 8G$ system of equations, however they can also be reduced to improve efficiency.
+First solving the nodal balance equation for a coefficient:
+\[
+a_{gu2}^{lmn}=\frac{1}{15}a_{gu4}^{lmn}+\frac{1}{6}\sum_{g'=1}^G(\kappa_u^2)_{gg'}^{lmn}\bar{\phi}_{g'}^{lmn}+\frac{(h_u^{l})^2}{6D_g^{lmn}}\bar{S}_{gu}^{lmn}
+\]
+Which can be substituted into the second moment equation:
+\[
+a_{gu4}^{lmn}+\frac{1}{24}\sum_{g'=1}^G(\kappa_u^2)_{gg'}^{lmn}\left[\sum_{g''=1}^G(\kappa_u^2)_{g'g''}^{lmn}\bar{\phi}_{g''}^{lmn}+\frac{(h_u^{l})^2}{D_g'^{lmn}}\bar{S}_{g'u}^{lmn}+\frac{4}{7}a_{g'u4}^{lmn}\right]=-5\frac{(h_u^{l})^2}{D_g^{lmn}}S_{gu2}^{lmn}
+\]
+This is now a $G\times G$ system of equations for each $a_{gu4}^{lmn}$ from $g=1,\dots,G$ whose solution can then be used to perform a direct solve for $a_{gu2}^{lmn}$ from $g=1,\dots,G$ using the previously solved balance equation.
+This is performed similarly for the $l-1$ node, and indeed the resulting equations are identical except for the index of $l$ vs $l-1$.
+
+The next reduction involves solving the discontinuity and equations to get:
+\[
+a_{gu1}^{l-1,mn}=\alpha_1+\beta_1a_{gu3}^{l-1,mn}+\gamma_1a_{gu3}^{lmn}
+\]
+and:
+\[
+a_{gu1}^{lmn}=\alpha_2+\beta_2a_{gu3}^{l-1,mn}+\gamma_2a_{gu3}^{lmn}
+\]
+where
+\begin{multline*}
+\alpha_1=\bigg(5 a_{gu2}^{l-1,mn} (D_g^{lmn} f_{gu+}^{l-1,mn} h_u^{l-1}-3 D_g^{l-1,mn} f_{gu-}^{lmn} h_u^{l})+a_{gu4}^{l-1,mn} D_g^{l-1,mn} f_{gu-}^{lmn} h_u^{l}\\
++D_g^{lmn} h_u^{l-1} (f_{gu-}^{lmn} (-20 a_{gu2}^{lmn}+a_{gu4}^{lmn}-10 \bar{\phi}_{g}^{lmn})+10 f_{gu+}^{l-1,mn} \bar{\phi}_{g}^{l-1,mn})\bigg)\\
+/
+\bigg(5 D_g^{l-1,mn} f_{gu-}^{lmn} h_u^{l}-5 D_g^{lmn} f_{gu+}^{l-1,mn} h_u^{l-1}\bigg)
+\end{multline*}
+\[
+\beta_1=\frac{D_g^{l-1,mn} f_{gu-}^{lmn} h_u^{l}}{2 D_g^{l-1,mn} f_{gu-}^{lmn} h_u^{l}-2 D_g^{lmn} f_{gu+}^{l-1,mn} h_u^{l-1}}
+\]
+\[
+\gamma_1=\frac{D_g^{lmn} f_{gu-}^{lmn} h_u^{l-1}}{2 D_g^{lmn} f_{gu+}^{l-1,mn} h_u^{l-1}-2 D_g^{l-1,mn} f_{gu-}^{lmn} h_u^{l}}
+\]
+\begin{multline*}
+\alpha_2=\bigg(10 a_{gu2}^{l-1,mn} D_g^{l-1,mn} f_{gu+}^{l-1,mn} h_u^{l}-a_{gu4}^{l-1,mn} D_g^{l-1,mn} f_{gu+}^{l-1,mn} h_u^{l}+15 a_{gu2}^{lmn} D_g^{lmn} f_{gu+}^{l-1,mn} h_u^{l-1}\\
++5 a_{gu2}^{lmn} D_g^{l-1,mn} f_{gu-}^{lmn} h_u^{l}-a_{gu4}^{lmn} D_g^{lmn} f_{gu+}^{l-1,mn} h_u^{l-1}\\
+-10 D_g^{l-1,mn} f_{gu+}^{l-1,mn} h_u^{l} \bar{\phi}_{g}^{l-1,mn}+10 D_g^{l-1,mn} f_{gu-}^{lmn} h_u^{l} \bar{\phi}_{g}^{lmn}\bigg)\\
+/\bigg(5 D_g^{lmn} f_{gu+}^{l-1,mn} h_u^{l-1}-5 D_g^{l-1,mn} f_{gu-}^{lmn} h_u^{l}\bigg)
+\end{multline*}
+\[
+\beta_2=\frac{D_g^{l-1,mn} f_{gu+}^{l-1,mn} h_u^{l}}{2 D_g^{l-1,mn} f_{gu-}^{lmn} h_u^{l}-2 D_g^{lmn} f_{gu+}^{l-1,mn} h_u^{l-1}}
+\]
+\[
+\gamma_2=\frac{D_g^{lmn} f_{gu+}^{l-1,mn} h_u^{l-1}}{2 D_g^{lmn} f_{gu+}^{l-1,mn} h_u^{l-1}-2 D_g^{l-1,mn} f_{gu-}^{lmn} h_u^{l}}
+\]
+
+So we can now plug this in to the first moment equations to get:
+\[
+\frac{1}{2}a_{gu3}^{l-1,mn}+\frac{1}{12}\sum_{g'=1}^G(\kappa_u^2)_{gg'}^{l-1,mn}\left[\alpha_1+\beta_1a_{g'u3}^{l-1,mn}+\gamma_1a_{g'u3}^{lmn}+\frac{1}{10}a_{g'u3}^{l-1,mn}\right]=-\frac{(h_u^{l-1})^2}{D_g^{l-1,mn}}S_{gu1}^{l-1,mn}
+\]
+and
+\[
+\frac{1}{2}a_{gu3}^{lmn}+\frac{1}{12}\sum_{g'=1}^G(\kappa_u^2)_{gg'}^{lmn}\left[\alpha_2+\beta_2a_{gu3}^{l-1,mn}+\gamma_2a_{gu3}^{lmn}+\frac{1}{10}a_{g'u3}^{lmn}\right]=-\frac{(h_u^{l})^2}{D_g^{lmn}}S_{gu1}^{lmn}
+\]
+This is now a $2G\times 2G$ equation for each $\frac{1}{2}a_{gu3}^{l-1,mn}$ and $\frac{1}{2}a_{gu3}^{lmn}$ from $g=1,\dots,G$ whose solution can then be used to perform a a direct solve for $a_{gu1}^{l-1,mn}$ and $a_{gu1}^{lmn}$ from $g=1,\dots,G$.
+
+These two reductions have now reduced the previous $8G\times 8G$ system of equations down to two $G\times G$ and one $2G\times 2G$ systems of equations.
+
+\section{Reduced One Node Problem Equations}
+
+Fundamental equations given or implied in~\cite{GehinPhD}, \cite{SmithMS}, and~\cite{Smith1983Nonlinear}:
+
+For left (minus direction) BC:
+\begin{enumerate}
+    \item Nodal balance equation:
+        \[
+        6a_{gu2}^{lmn}-\frac{2}{5}a_{gu4}^{lmn}=\sum_{g'=1}^G(\kappa_u^2)_{gg'}^{lmn}\bar{\phi}_{g'}^{lmn}+\frac{(h_u^{l})^2}{D_g^{lmn}}\bar{S}_{gu}^{lmn}
+        \]
+    \item First moment equation:
+        \[
+        \frac{1}{2}a_{gu3}^{lmn}+\frac{1}{12}\sum_{g'=1}^G(\kappa_u^2)_{gg'}^{lmn}\left[a_{g'u1}^{lmn}+\frac{1}{10}a_{g'u3}^{lmn}\right]=-\frac{(h_u^{l})^2}{D_g^{lmn}}S_{gu1}^{lmn}
+        \]
+    \item Second moment equation:
+        \[
+        \frac{1}{5}a_{gu4}^{lmn}+\frac{1}{20}\sum_{g'=1}^G(\kappa_u^2)_{gg'}^{lmn}\left[a_{g'u2}^{lmn}+\frac{1}{35}a_{g'u4}^{lmn}\right]=-\frac{(h_u^{l})^2}{D_g^{lmn}}S_{gu2}^{lmn}
+        \]
+    \item Left BC face:
+        \[
+        \left[\bar{\phi}_{g}^{lmn}-\frac{1}{2}a_{gu1}^{lmn}+\frac{1}{2}a_{gu2}^{lmn}\right]f_{gu-}^{lmn}=-\sum_{g'=1}^G\Gamma_{gg',u-}^{mn}\frac{D_{g'}^{lmn}}{h_u^{l}}\left[a_{g'u1}^{lmn}-3a_{g'u2}^{lmn}-\frac{1}{2}a_{g'u3}^{lmn}+\frac{1}{5}a_{g'u4}^{lmn}\right]
+        \]
+\end{enumerate}
+
+For right (plus direction) BC:
+\begin{enumerate}
+    \item Nodal balance equation:
+        \[
+        6a_{gu2}^{lmn}-\frac{2}{5}a_{gu4}^{lmn}=\sum_{g'=1}^G(\kappa_u^2)_{gg'}^{lmn}\bar{\phi}_{g'}^{lmn}+\frac{(h_u^{l})^2}{D_g^{lmn}}\bar{S}_{gu}^{lmn}
+        \]
+    \item First moment equation:
+        \[
+        \frac{1}{2}a_{gu3}^{lmn}+\frac{1}{12}\sum_{g'=1}^G(\kappa_u^2)_{gg'}^{lmn}\left[a_{g'u1}^{lmn}+\frac{1}{10}a_{g'u3}^{lmn}\right]=-\frac{(h_u^{l})^2}{D_g^{lmn}}S_{gu1}^{lmn}
+        \]
+    \item Second moment equation:
+        \[
+        \frac{1}{5}a_{gu4}^{lmn}+\frac{1}{20}\sum_{g'=1}^G(\kappa_u^2)_{gg'}^{lmn}\left[a_{g'u2}^{lmn}+\frac{1}{35}a_{g'u4}^{lmn}\right]=-\frac{(h_u^{l})^2}{D_g^{lmn}}S_{gu2}^{lmn}
+        \]
+    \item Right BC face:
+        \[
+        \left[\bar{\phi}_{g}^{lmn}+\frac{1}{2}a_{gu1}^{lmn}+\frac{1}{2}a_{gu2}^{lmn}\right]f_{gu+}^{lmn}=-\sum_{g'=1}^G\Gamma_{gg',u+}^{mn}\frac{D_{g'}^{lmn}}{h_u^{l}}\left[a_{g'u1}^{lmn}+3a_{g'u2}^{lmn}-\frac{1}{2}a_{g'u3}^{lmn}-\frac{1}{5}a_{g'u4}^{lmn}\right]
+        \]
+\end{enumerate}
+
+These boundary conditions appear to be $4G\times 4G$ systems of equations.
+However, for both of these recall the nodal balance reduction to get the $G\times G$ equation for both $a_{gu4}^{lmn}$ and $a_{gu2}^{lmn}$.
+This then leaves a single $2G\times 2G$ system of equations.
+
+But further reductions can be made for boundary conditions that lack a cross group term (that is to say, any boundary condition other than out-scattering albedos, i.e. vacuum, reflective, group independent albedo, and in-scattering only albedos).
+Taking this form for BC faces and solving for the left BC face:
+\[
+a_{gu1}^{lmn}=\alpha_1+\beta_1a_{gu3}^{lmn}
+\]
+where
+\[
+\alpha_1=\frac{-30 a_{gu2}^{lmn}\Gamma_{g,u-}^{mn} D_g^{lmn}+5 a_{gu2}^{lmn}f_{gu-}^{lmn} h_u^{l}+2 a_{gu4}^{lmn} \Gamma_{g,u-}^{mn} D_g^{lmn}+10 f_{gu-}^{lmn} h_u^{l} \bar{\phi}_{g}^{lmn}}{5 f_{gu-}^{lmn} h_u^{l}-10 \Gamma_{g,u-}^{mn} D_g^{lmn}}
+\]
+\[
+\beta_1=\frac{\Gamma_{g,u-}^{mn} D_g^{lmn}}{2 \Gamma_{g,u-}^{mn} D_g^{lmn}-f_{gu-}^{lmn} h_u^{l}}
+\]
+And for the right BC face:
+\[
+a_{gu1}^{lmn}=\alpha_2+\beta_2a_{gu3}^{lmn}
+\]
+where
+\[
+\alpha_2=-\frac{30 a_{gu2}^{lmn}\Gamma_{g,u+}^{mn} D_g^{lmn}+5 a_{gu2}^{lmn}f_{gu+}^{lmn} h_u^{l}-2 a_{gu4}^{lmn} \Gamma_{g,u+}^{mn} D_g^{lmn}+10 f_{gu+}^{lmn} h_u^{l} \bar{\phi}_{g}^{lmn}}{10 \Gamma_{g,u+}^{mn} D_g^{lmn}+5 f_{gu+}^{lmn} h_u^{l}}
+\]
+\[
+\beta_2=\frac{\Gamma_{g,u+}^{mn} D_g^{lmn}}{2 \Gamma_{g,u+}^{mn} D_g^{lmn}+f_{gu+}^{lmn} h_u^{l}}
+\]
+
+\section{Errata}
+
+\subsection{Notational Errors in Dr. Gehnin's Thesis}
+
+Dr. Gehin's thesis is thorough and correct for the understanding of this method.
+However, almost all works have some errors contained within, and Dr. Gehin's thesis is no exception.
+The following are notational errors in Dr. Gehin's thesis that we noticed:
+\begin{enumerate}
+    \item Equations 2.41, 2.42, 2.44, and 2.45 all mention a value $\bar{S}_p$ where $p$ is the moment indicator.
+    By Dr. Gehin's previous notation, higher order moments don't have bars over them (see sepcifically equations 2.37 and 2.39) so these terms should be listed as $S_p$
+    \item All flux and diffusion coefficient terms on the RHS of equations 2.49 and 2.50 should have a $g'$ index not a $g$ index.
+    This is because it is a substitution of the current $J_{g'}$ in equation 2.48 using the expansion form of the current.
+\end{enumerate}
+
+
+
+
+
+
+
+
+
+
+
+
