@@ -261,11 +261,11 @@ CONTAINS
 !> @param h_y - node widths in the y direction
 !>
   subroutine solver(core_x_size,core_y_size,num_eg,tol_xflux,tol_xkeff,xflux,xkeff,tol_max_iter, &
-                    nodal_method,assm_map,assm_xs,dtilde_x,dtilde_y,h_x,h_y,dl_wielandt)
+                    nodal_method,assm_map,assm_xs,dtilde_x,dtilde_y,h_x,h_y,dl_wielandt,prob_sym)
     INTEGER, INTENT(IN) :: core_x_size,core_y_size,num_eg,tol_max_iter,assm_map(:,:)
     REAL(kr8), INTENT(IN) :: tol_xflux,tol_xkeff,h_x(:),h_y(:),dl_wielandt
     REAL(kr8), INTENT(INOUT) :: xflux(:,:,:),xkeff,dtilde_x(:,:,:),dtilde_y(:,:,:)
-    CHARACTER(*), INTENT(IN) :: nodal_method
+    CHARACTER(*), INTENT(IN) :: nodal_method,prob_sym
     TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
     !local variables
     INTEGER(ki4) :: i, j, gp, g
@@ -368,7 +368,7 @@ CONTAINS
       !update the dtilde factors if we are using the poly expansion method
       IF(nodal_method .EQ. 'poly')THEN
         CALL comp_dtilde(core_x_size,core_y_size,num_eg,assm_xs,assm_map,xflux,dtilde_x, &
-                        dtilde_y,h_x,h_y)
+                        dtilde_y,h_x,h_y,prob_sym)
         CALL build_amatrix(amat,core_x_size,core_y_size,num_eg,assm_xs,assm_map,h_x,h_y,dtilde_x, &
                           dtilde_y)
         IF(wielandt_on)THEN
@@ -732,15 +732,16 @@ CONTAINS
 !> @param h_y - node widths in the y direction
 !>
   SUBROUTINE comp_dtilde(core_x_size,core_y_size,num_eg,assm_xs,assm_map,xflux,dtilde_x, &
-                          dtilde_y,h_x,h_y)
+                          dtilde_y,h_x,h_y,prob_sym)
     INTEGER, INTENT(IN) :: core_x_size,core_y_size,num_eg,assm_map(:,:)
     REAL(kr8), INTENT(IN) :: xflux(:,:,:),h_x(:),h_y(:)
     REAL(kr8), INTENT(INOUT) :: dtilde_x(:,:,:),dtilde_y(:,:,:)
+    CHARACTER(*), INTENT(IN) :: prob_sym
     TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
     !local variables
-    REAL(kr8) :: s_bar_x(core_x_size,core_y_size,num_eg),s_bar_y(core_x_size,core_y_size,num_eg)
-    CALL comp_s(s_bar_x,s_bar_y,core_x_size,core_y_size,num_eg,assm_xs,assm_map,xflux,dtilde_x, &
-                dtilde_y,h_x,h_y)
+    REAL(kr8) :: s_x_mom(core_x_size,core_y_size,num_eg,2),s_y_mom(core_x_size,core_y_size,num_eg,2)
+    CALL comp_s_moms(s_x_mom,s_y_mom,core_x_size,core_y_size,num_eg,assm_xs,assm_map,xflux,dtilde_x, &
+                dtilde_y,h_x,h_y,prob_sym)
     STOP 'comp_dtilde not yet complete'
   ENDSUBROUTINE comp_dtilde
 
@@ -759,20 +760,28 @@ CONTAINS
 !> @param h_x - node widths in the x direction
 !> @param h_y - node widths in the y direction
 !>
-  SUBROUTINE comp_s(s_bar_x,s_bar_y,core_x_size,core_y_size,num_eg,assm_xs,assm_map,xflux,dtilde_x, &
-                    dtilde_y,h_x,h_y)
+  SUBROUTINE comp_s_moms(s_x,s_y,core_x_size,core_y_size,num_eg,assm_xs,assm_map,xflux,dtilde_x, &
+                    dtilde_y,h_x,h_y,prob_sym)
+    REAL(kr8),INTENT(OUT) :: s_x(:,:,:,:),s_y(:,:,:,:)
     INTEGER, INTENT(IN) :: core_x_size,core_y_size,num_eg,assm_map(:,:)
     REAL(kr8), INTENT(IN) :: xflux(:,:,:),h_x(:),h_y(:)
     REAL(kr8), INTENT(INOUT) :: dtilde_x(:,:,:),dtilde_y(:,:,:)
+    CHARACTER(*), INTENT(IN) :: prob_sym
     TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
     !local variables
-    REAL(kr8), INTENT(OUT) :: s_bar_x(:,:,:),s_bar_y(:,:,:)
+    REAL(kr8) :: s_bar_x(core_x_size,core_y_size,num_eg),s_bar_y(core_x_size,core_y_size,num_eg)
     REAL(kr8) :: j_x(core_x_size+1,core_y_size,num_eg),j_y(core_x_size,core_y_size+1,num_eg)
     REAL(kr8) :: l_bar_x(core_x_size,core_y_size,num_eg),l_bar_y(core_x_size,core_y_size,num_eg)
-    INTEGER(ki4) :: i,j,g
+    REAL(kr8) :: bm(2),cm(2),bp(2),cp(2),bmm,cmm,bpp,cpp
+    INTEGER :: i,j,g
 
-    !compute x direction currents at each face
     j_x=0.0D0
+    j_y=0.0D0
+    l_bar_x=0.0D0
+    l_bar_y=0.0D0
+    s_bar_x=0.0D0
+    s_bar_y=0.0D0
+    !compute x direction currents at each face
     DO i=1,core_x_size+1
       DO j=1,core_y_size
         DO g=1,num_eg
@@ -789,7 +798,6 @@ CONTAINS
       ENDDO
     ENDDO
     !compute y direction currents at each face
-    j_y=0.0D0
     DO i=1,core_x_size
       DO j=1,core_y_size+1
         DO g=1,num_eg
@@ -805,17 +813,6 @@ CONTAINS
         ENDDO
       ENDDO
     ENDDO
-
-    !!x direction currents
-    !write(*,*)'j_x'
-    !DO j=1,core_y_size
-    !  WRITE(*,'(10000ES16.8)')j_x(:,j,1)
-    !ENDDO
-    !!y direction currents
-    !write(*,*)'j_y'
-    !DO j=1,core_y_size+1
-    !  WRITE(*,'(10000ES16.8)')j_y(:,j,1)
-    !ENDDO
 
     !compute l_bar_x values
     DO i=1,core_x_size
@@ -834,17 +831,6 @@ CONTAINS
       ENDDO
     ENDDO
 
-    !!x direction l
-    !write(*,*)'l_x'
-    !DO j=1,core_y_size
-    ! WRITE(*,'(10000ES16.8)')l_bar_x(:,j,1)
-    !ENDDO
-    !!y direction l
-    !write(*,*)'l_y'
-    !DO j=1,core_y_size
-    ! WRITE(*,'(10000ES16.8)')l_bar_y(:,j,1)
-    !ENDDO
-
     !compute s_bar_x values
     DO i=1,core_x_size
       DO j=1,core_y_size
@@ -862,15 +848,82 @@ CONTAINS
       ENDDO
     ENDDO
 
-    !x direction l
-    write(*,*)'s_x'
-    DO j=1,core_y_size
-      WRITE(*,'(10000ES16.8)')s_bar_x(:,j,1)
+    bm(1)=-1.0D0
+    cm(1)=1.0D0/2.0D0
+    bp(1)=0.0D0
+    cp(1)=0.5D0
+    bp(2)=3.0D0
+    cp(2)=-1.0D0
+    bm(2)=-1.0D0
+    cm(2)=-1.0D0
+    bpp=-1.0D0
+    cpp=1.0D0/2.0D0
+    bmm=0.0D0
+    cmm=1.0D0/2.0D0
+
+    !compute the moments of the transverse leakage
+    IF(core_x_size .LT. 3 .OR. core_y_size .LT. 3)THEN
+      CALL fatal_error('polynomial solution not supported for less than 3 nodes in any direction')
+    ENDIF
+    !computing s_x moments
+    DO i=1,core_x_size
+      DO j=1,core_y_size
+        DO g=1,num_eg
+          IF(i .EQ. 1)THEN
+            IF(prob_sym .EQ. 'half' .OR. prob_sym .EQ. 'qtr')THEN !reflective on left side
+              s_x(i,j,g,1)=((bm(1)+cm(1))*s_bar_x(i,j,g)&
+                -(bm(1)+bp(1)+cm(1)+cp(1))*s_bar_x(i,j,g)+(bp(1)+cp(1))*s_bar_x(i+1,j,g))/12.0D0
+              s_x(i,j,g,2)=(cm(1)*s_bar_x(i,j,g)&
+                -(cm(1)+cp(1))*s_bar_x(i,j,g)+cp(1)*s_bar_x(i+1,j,g))/60.0D0
+            ELSE !vacuum on left side
+              s_x(i,j,g,1)=((bp(2)+cp(2))*s_bar_x(i+1,j,g)-(bp(2)+bpp+cp(2)+cpp)*s_bar_x(i,j,g)&
+                +(bpp+cpp)*s_bar_x(i+2,j,g))/12.0D0
+              s_x(i,j,g,2)=(cp(2)*s_bar_x(i+1,j,g)&
+                -(cp(2)+cpp)*s_bar_x(i,j,g)+cpp*s_bar_x(i+2,j,g))/60.0D0
+            ENDIF
+          ELSEIF(i .EQ. core_x_size)THEN !there is always vacuum on the right side
+            s_x(i,j,g,1)=((bm(2)+cm(2))*s_bar_x(i-1,j,g)-(bm(2)+bmm+cm(2)+cmm)*s_bar_x(i,j,g)&
+              +(bmm+cmm)*s_bar_x(i-2,j,g))/12.0D0
+            s_x(i,j,g,2)=(cm(2)*s_bar_x(i-1,j,g)-(cm(2)+cmm)*s_bar_x(i,j,g)&
+              +cmm*s_bar_x(i-2,j,g))/60.0D0
+          ELSE  !standard equation
+            s_x(i,j,g,1)=((bm(1)+cm(1))*s_bar_x(i-1,j,g)&
+              -(bm(1)+bp(1)+cm(1)+cp(1))*s_bar_x(i,j,g)+(bp(1)+cp(1))*s_bar_x(i+1,j,g))/12.0D0
+            s_x(i,j,g,2)=(cm(1)*s_bar_x(i-1,j,g)&
+              -(cm(1)+cp(1))*s_bar_x(i,j,g)+cp(1)*s_bar_x(i+1,j,g))/60.0D0
+          ENDIF
+        ENDDO
+      ENDDO
     ENDDO
-    !y direction l
-    write(*,*)'s_y'
-    DO j=1,core_y_size
-      WRITE(*,'(10000ES16.8)')s_bar_y(:,j,1)
+    !computing s_y moments
+    DO i=1,core_x_size
+      DO j=1,core_y_size
+        DO g=1,num_eg
+          IF(j .EQ. 1)THEN
+            IF(prob_sym .EQ. 'qtr')THEN !reflective on top side
+              s_y(i,j,g,1)=((bm(1)+cm(1))*s_bar_y(i,j,g)&
+                -(bm(1)+bp(1)+cm(1)+cp(1))*s_bar_y(i,j,g)+(bp(1)+cp(1))*s_bar_y(i,j+1,g))/12.0D0
+              s_y(i,j,g,2)=(cm(1)*s_bar_y(i,j,g)&
+                -(cm(1)+cp(1))*s_bar_y(i,j,g)+cp(1)*s_bar_y(i,j+1,g))/60.0D0
+            ELSE !vacuum on top side
+              s_y(i,j,g,1)=((bp(2)+cp(2))*s_bar_y(i,j+1,g)-(bp(2)+bpp+cp(2)+cpp)*s_bar_y(i,j,g)&
+                +(bpp+cpp)*s_bar_y(i,j+2,g))/12.0D0
+              s_y(i,j,g,2)=(cp(2)*s_bar_y(i,j+1,g)&
+                -(cp(2)+cpp)*s_bar_y(i,j,g)+cpp*s_bar_y(i,j+2,g))/60.0D0
+            ENDIF
+          ELSEIF(j .EQ. core_y_size)THEN !there is always vacuum on the bot side
+            s_y(i,j,g,1)=((bm(2)+cm(2))*s_bar_y(i,j-1,g)-(bm(2)+bmm+cm(2)+cmm)*s_bar_y(i,j,g)&
+              +(bmm+cmm)*s_bar_y(i,j-2,g))/12.0D0
+            s_y(i,j,g,2)=(cm(2)*s_bar_y(i,j-1,g)-(cm(2)+cmm)*s_bar_y(i,j,g)&
+              +cmm*s_bar_y(i,j-2,g))/60.0D0
+          ELSE  !standard equation
+            s_y(i,j,g,1)=((bm(1)+cm(1))*s_bar_y(i,j-1,g)&
+              -(bm(1)+bp(1)+cm(1)+cp(1))*s_bar_y(i,j,g)+(bp(1)+cp(1))*s_bar_y(i,j+1,g))/12.0D0
+            s_y(i,j,g,2)=(cm(1)*s_bar_y(i,j-1,g)&
+              -(cm(1)+cp(1))*s_bar_y(i,j,g)+cp(1)*s_bar_y(i,j+1,g))/60.0D0
+          ENDIF
+        ENDDO
+      ENDDO
     ENDDO
-  ENDSUBROUTINE comp_s
+  ENDSUBROUTINE comp_s_moms
 ENDMODULE solvers_module
