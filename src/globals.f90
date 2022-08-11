@@ -64,6 +64,9 @@ MODULE globals
   !> nodal method option
   CHARACTER(100) :: nodal_method='fd'
 
+  !> boundary condition option
+  CHARACTER(100) :: bc_opt='vacuum'
+
 CONTAINS
 
 !---------------------------------------------------------------------------------------------------
