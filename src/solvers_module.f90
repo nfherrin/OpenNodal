@@ -10,7 +10,7 @@ MODULE solvers_module
   PRIVATE
   PUBLIC :: solver,solver_init
 
-  CHARACTER(*), PARAMETER :: inner_solve_method = 'dgesv'
+  CHARACTER(*), PARAMETER :: inner_solve_method = 'sor'
 
 CONTAINS
 
@@ -77,6 +77,14 @@ CONTAINS
         dtilde_y(:,core_y_size+1,:)=0.5d0
       CASE DEFAULT
         CALL fatal_error('Invalid symmetry option: '//TRIM(ADJUSTL(prob_sym)))
+    ENDSELECT
+    SELECTCASE(bc_opt)
+      CASE('vac','vacuum') !nothing to do, already taken care of in previous block
+      CASE('reflect','reflective') !all dtildes should start as zero since that is for reflective at boundary
+        dtilde_x=0.0D0
+        dtilde_y=0.0D0
+      CASE('albedo') !will eventually be supported so give a debugging stop, not a fatal error
+        STOP 'albedo boundary conditions not yet supported!'
     ENDSELECT
   ENDSUBROUTINE solver_init
 !

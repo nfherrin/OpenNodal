@@ -164,7 +164,7 @@ CONTAINS
     !data for CORE block
     i=2
     blocks(i)%bname='[CORE]'
-    blocks(i)%num_cards=5
+    blocks(i)%num_cards=6
     ALLOCATE(blocks(i)%cards(blocks(i)%num_cards))
     j=1
     blocks(i)%cards(j)%cname='dim'
@@ -181,6 +181,9 @@ CONTAINS
     j=5
     blocks(i)%cards(j)%cname='assm_map'
     blocks(i)%cards(j)%getcard=>get_assm_map
+    j=6
+    blocks(i)%cards(j)%cname='bc'
+    blocks(i)%cards(j)%getcard=>get_bc
 
     !data for MATERIAL block
     i=3
@@ -507,6 +510,7 @@ CONTAINS
       ENDIF
     ENDIF
   ENDSUBROUTINE get_assm_map
+
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the nsplit option
 !> @param this_card - The card we're retrieving data for
@@ -657,4 +661,26 @@ CONTAINS
       ENDIF
     ENDDO
   ENDSUBROUTINE get_xs_map
+
+!---------------------------------------------------------------------------------------------------
+!> @brief Subroutine to read in the boundary conditions option
+!> @param this_card - The card we're retrieving data for
+!> @param wwords - The string from which the data is being retrieved
+!>
+  SUBROUTINE get_bc(this_card,wwords)
+    CLASS(cardType),INTENT(INOUT) :: this_card
+    CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+
+    CALL print_log(TRIM(this_card%cname)//' card found')
+
+    bc_opt=TRIM(ADJUSTL(wwords(2)))
+
+    SELECTCASE(bc_opt)
+      CASE('vac','vacuum','reflect','reflective') !nothing to do, supported
+      CASE('albedo') !will eventually be supported so give a debugging stop, not a fatal error
+        STOP 'albedo boundary conditions not yet supported!'
+      CASE DEFAULT
+        CALL fatal_error('Invalid boundary condition given: '//TRIM(bc_opt))
+    ENDSELECT
+  ENDSUBROUTINE get_bc
 ENDMODULE input_module
