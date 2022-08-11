@@ -222,7 +222,10 @@ CONTAINS
 
       CALL print_log(TRIM(str(iter,4))//'   '//TRIM(str(xkeff,6,'F'))//'   '//TRIM(str(conv_xkeff,2)) &
         //'   '//TRIM(str(conv_xflux,2)))
-      !CALL comp_dtilde()
+      IF(nodal_method .EQ. 'poly')THEN
+        CALL comp_dtilde()
+        CALL build_amatrix(amat)
+      ENDIF
 
       IF ((conv_xflux < tol_xflux) .AND. (conv_xkeff < tol_xkeff)) EXIT
 

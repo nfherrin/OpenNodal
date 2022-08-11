@@ -51,7 +51,6 @@ MODULE globals
   !>  scalar flux
   REAL(kr8), ALLOCATABLE :: xflux(:,:,:) ! (nx,ny)
 
-  ! TODO implement user input
   !>  maximum number of iterations
   INTEGER(ki4) :: tol_max_iter = 100
   !>  keff convergence tolerance
@@ -61,6 +60,9 @@ MODULE globals
 
   !> nsplit value, for decomposing nodes into nsplit number of sub-nodes
   INTEGER(ki4) :: nsplit=1
+
+  !> nodal method option
+  CHARACTER(100) :: nodal_method='fd'
 
 CONTAINS
 

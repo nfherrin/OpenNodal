@@ -140,7 +140,7 @@ CONTAINS
     !data for caseid block
     i=1
     blocks(i)%bname='[CASE_DETAILS]'
-    blocks(i)%num_cards=5
+    blocks(i)%num_cards=6
     ALLOCATE(blocks(i)%cards(blocks(i)%num_cards))
     j=1
     blocks(i)%cards(j)%cname='title'
@@ -157,6 +157,9 @@ CONTAINS
     j=5
     blocks(i)%cards(j)%cname='max_its'
     blocks(i)%cards(j)%getcard=>get_max_its
+    j=6
+    blocks(i)%cards(j)%cname='nodal_method'
+    blocks(i)%cards(j)%getcard=>get_nodal_method
 
     !data for CORE block
     i=2
@@ -583,6 +586,30 @@ CONTAINS
     READ(wwords(2),*)tol_max_iter
 
   ENDSUBROUTINE get_max_its
+
+!---------------------------------------------------------------------------------------------------
+!> @brief Subroutine to read in which nodal method is being used, right now only fd and poly supported
+!> @param this_card - The card we're retrieving data for
+!> @param wwords - The string from which the data is being retrieved
+!>
+  SUBROUTINE get_nodal_method(this_card,wwords)
+    CLASS(cardType),INTENT(INOUT) :: this_card
+    CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+
+    INTEGER(ki4) :: nwords
+    CHARACTER(ll_max) :: t_char,words(lp_max)
+    INTEGER(ki4) :: i,ios,j,oct_sym
+
+    wwords(1)=TRIM(wwords(1))
+    CALL print_log(TRIM(this_card%cname)//' card found')
+
+    nodal_method=TRIM(ADJUSTL(wwords(2)))
+
+    IF(nodal_method .NE. 'poly' .AND. nodal_method .NE. 'fd')THEN
+      CALL fatal_error('Invalid nodal method: '//TRIM(nodal_method))
+    ENDIF
+
+  ENDSUBROUTINE get_nodal_method
 
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the cross section filename
