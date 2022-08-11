@@ -720,7 +720,7 @@ CONTAINS
   ENDSUBROUTINE wielandt_shift_amatrix
 
 !---------------------------------------------------------------------------------------------------
-!> @brief This subroutine calculates dtilde
+!> @brief This subroutine calculates dtilde by solving the two node and one node problems
 !> @param core_x_size - core size in the x direction
 !> @param core_y_size - core size in the y direction
 !> @param num_eg - number of energy groups
@@ -740,11 +740,34 @@ CONTAINS
     CHARACTER(*), INTENT(IN) :: prob_sym,bc_opt
     TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
     !local variables
-    REAL(kr8) :: s_x_mom(core_x_size,core_y_size,num_eg,2),s_y_mom(core_x_size,core_y_size,num_eg,2)
+    REAL(kr8) :: s_x_mom(core_x_size,core_y_size,num_eg,3),s_y_mom(core_x_size,core_y_size,num_eg,3)
+    INTEGER :: i,j
+
     CALL comp_s_moms(s_x_mom,s_y_mom,core_x_size,core_y_size,num_eg,assm_xs,assm_map,xflux,dtilde_x, &
                 dtilde_y,h_x,h_y,prob_sym,bc_opt)
+
+    !solve for dtilde values using a one or two node problem
+    DO i=1,core_x_size+1
+      DO j=1,core_x_size
+        IF(i .EQ. 1 .OR. i .EQ. core_x_size+1)THEN
+          CALL one_node_solve()
+        ElSE
+          CALL two_node_solve()
+        ENDIF
+      ENDDO
+    ENDDO
     STOP 'comp_dtilde not yet complete'
   ENDSUBROUTINE comp_dtilde
+
+  !solve the one node problem
+  SUBROUTINE one_node_solve()
+    STOP 'one_node_solve not yet complete'
+  ENDSUBROUTINE one_node_solve
+
+  !solve the two node problem
+  SUBROUTINE two_node_solve()
+    STOP 'two_node_solve not yet complete'
+  ENDSUBROUTINE two_node_solve
 
 !---------------------------------------------------------------------------------------------------
 !> @brief This subroutine the sbar values
@@ -770,7 +793,6 @@ CONTAINS
     CHARACTER(*), INTENT(IN) :: prob_sym,bc_opt
     TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
     !local variables
-    REAL(kr8) :: s_bar_x(core_x_size,core_y_size,num_eg),s_bar_y(core_x_size,core_y_size,num_eg)
     REAL(kr8) :: j_x(core_x_size+1,core_y_size,num_eg),j_y(core_x_size,core_y_size+1,num_eg)
     REAL(kr8) :: l_bar_x(core_x_size,core_y_size,num_eg),l_bar_y(core_x_size,core_y_size,num_eg)
     REAL(kr8) :: bm(2),cm(2),bp(2),cp(2),bmm,cmm,bpp,cpp
@@ -780,8 +802,8 @@ CONTAINS
     j_y=0.0D0
     l_bar_x=0.0D0
     l_bar_y=0.0D0
-    s_bar_x=0.0D0
-    s_bar_y=0.0D0
+    s_x=0.0D0
+    s_y=0.0D0
     !compute x direction currents at each face
     DO i=1,core_x_size+1
       DO j=1,core_y_size
@@ -836,7 +858,7 @@ CONTAINS
     DO i=1,core_x_size
       DO j=1,core_y_size
         DO g=1,num_eg
-          s_bar_x(i,j,g)=l_bar_y(i,j,g)/h_y(j)
+          s_x(i,j,g,1)=l_bar_y(i,j,g)/h_y(j)
         ENDDO
       ENDDO
     ENDDO
@@ -844,7 +866,7 @@ CONTAINS
     DO i=1,core_x_size
       DO j=1,core_y_size
         DO g=1,num_eg
-          s_bar_y(i,j,g)=l_bar_x(i,j,g)/h_x(i)
+          s_y(i,j,g,1)=l_bar_x(i,j,g)/h_x(i)
         ENDDO
       ENDDO
     ENDDO
@@ -873,41 +895,41 @@ CONTAINS
           IF(i .EQ. 1)THEN
             SELECTCASE(bc_opt)
               CASE('reflect','reflective') !reflective on left side
-                s_x(i,j,g,1)=((bm(1)+cm(1))*s_bar_x(i,j,g)&
-                  -(bm(1)+bp(1)+cm(1)+cp(1))*s_bar_x(i,j,g)+(bp(1)+cp(1))*s_bar_x(i+1,j,g))/12.0D0
-                s_x(i,j,g,2)=(cm(1)*s_bar_x(i,j,g)&
-                  -(cm(1)+cp(1))*s_bar_x(i,j,g)+cp(1)*s_bar_x(i+1,j,g))/60.0D0
+                s_x(i,j,g,2)=((bm(1)+cm(1))*s_x(i,j,g,1)&
+                  -(bm(1)+bp(1)+cm(1)+cp(1))*s_x(i,j,g,1)+(bp(1)+cp(1))*s_x(i+1,j,g,1))/12.0D0
+                s_x(i,j,g,3)=(cm(1)*s_x(i,j,g,1)&
+                  -(cm(1)+cp(1))*s_x(i,j,g,1)+cp(1)*s_x(i+1,j,g,1))/60.0D0
               CASE DEFAULT
                 IF(prob_sym .EQ. 'half' .OR. prob_sym .EQ. 'qtr')THEN !reflective on left side
-                  s_x(i,j,g,1)=((bm(1)+cm(1))*s_bar_x(i,j,g)&
-                    -(bm(1)+bp(1)+cm(1)+cp(1))*s_bar_x(i,j,g)+(bp(1)+cp(1))*s_bar_x(i+1,j,g))/12.0D0
-                  s_x(i,j,g,2)=(cm(1)*s_bar_x(i,j,g)&
-                    -(cm(1)+cp(1))*s_bar_x(i,j,g)+cp(1)*s_bar_x(i+1,j,g))/60.0D0
+                  s_x(i,j,g,2)=((bm(1)+cm(1))*s_x(i,j,g,1)&
+                    -(bm(1)+bp(1)+cm(1)+cp(1))*s_x(i,j,g,1)+(bp(1)+cp(1))*s_x(i+1,j,g,1))/12.0D0
+                  s_x(i,j,g,3)=(cm(1)*s_x(i,j,g,1)&
+                    -(cm(1)+cp(1))*s_x(i,j,g,1)+cp(1)*s_x(i+1,j,g,1))/60.0D0
                 ELSE !vacuum on left side
-                  s_x(i,j,g,1)=((bp(2)+cp(2))*s_bar_x(i+1,j,g)-(bp(2)+bpp+cp(2)+cpp)*s_bar_x(i,j,g)&
-                    +(bpp+cpp)*s_bar_x(i+2,j,g))/12.0D0
-                  s_x(i,j,g,2)=(cp(2)*s_bar_x(i+1,j,g)&
-                    -(cp(2)+cpp)*s_bar_x(i,j,g)+cpp*s_bar_x(i+2,j,g))/60.0D0
+                  s_x(i,j,g,2)=((bp(2)+cp(2))*s_x(i+1,j,g,1)-(bp(2)+bpp+cp(2)+cpp)*s_x(i,j,g,1)&
+                    +(bpp+cpp)*s_x(i+2,j,g,1))/12.0D0
+                  s_x(i,j,g,3)=(cp(2)*s_x(i+1,j,g,1)&
+                    -(cp(2)+cpp)*s_x(i,j,g,1)+cpp*s_x(i+2,j,g,1))/60.0D0
                 ENDIF
             ENDSELECT
           ELSEIF(i .EQ. core_x_size)THEN
             SELECTCASE(bc_opt)
               CASE('reflect','reflective') !reflective on right side
-                s_x(i,j,g,1)=((bm(1)+cm(1))*s_bar_x(i-1,j,g)&
-                  -(bm(1)+bp(1)+cm(1)+cp(1))*s_bar_x(i,j,g)+(bp(1)+cp(1))*s_bar_x(i,j,g))/12.0D0
-                s_x(i,j,g,2)=(cm(1)*s_bar_x(i-1,j,g)&
-                  -(cm(1)+cp(1))*s_bar_x(i,j,g)+cp(1)*s_bar_x(i,j,g))/60.0D0
+                s_x(i,j,g,2)=((bm(1)+cm(1))*s_x(i-1,j,g,1)&
+                  -(bm(1)+bp(1)+cm(1)+cp(1))*s_x(i,j,g,1)+(bp(1)+cp(1))*s_x(i,j,g,1))/12.0D0
+                s_x(i,j,g,3)=(cm(1)*s_x(i-1,j,g,1)&
+                  -(cm(1)+cp(1))*s_x(i,j,g,1)+cp(1)*s_x(i,j,g,1))/60.0D0
               CASE DEFAULT !vacuum on right side
-                s_x(i,j,g,1)=((bm(2)+cm(2))*s_bar_x(i-1,j,g)-(bm(2)+bmm+cm(2)+cmm)*s_bar_x(i,j,g)&
-                  +(bmm+cmm)*s_bar_x(i-2,j,g))/12.0D0
-                s_x(i,j,g,2)=(cm(2)*s_bar_x(i-1,j,g)-(cm(2)+cmm)*s_bar_x(i,j,g)&
-                  +cmm*s_bar_x(i-2,j,g))/60.0D0
+                s_x(i,j,g,2)=((bm(2)+cm(2))*s_x(i-1,j,g,1)-(bm(2)+bmm+cm(2)+cmm)*s_x(i,j,g,1)&
+                  +(bmm+cmm)*s_x(i-2,j,g,1))/12.0D0
+                s_x(i,j,g,3)=(cm(2)*s_x(i-1,j,g,1)-(cm(2)+cmm)*s_x(i,j,g,1)&
+                  +cmm*s_x(i-2,j,g,1))/60.0D0
             ENDSELECT
           ELSE  !standard equation, not on the boundary
-            s_x(i,j,g,1)=((bm(1)+cm(1))*s_bar_x(i-1,j,g)&
-              -(bm(1)+bp(1)+cm(1)+cp(1))*s_bar_x(i,j,g)+(bp(1)+cp(1))*s_bar_x(i+1,j,g))/12.0D0
-            s_x(i,j,g,2)=(cm(1)*s_bar_x(i-1,j,g)&
-              -(cm(1)+cp(1))*s_bar_x(i,j,g)+cp(1)*s_bar_x(i+1,j,g))/60.0D0
+            s_x(i,j,g,2)=((bm(1)+cm(1))*s_x(i-1,j,g,1)&
+              -(bm(1)+bp(1)+cm(1)+cp(1))*s_x(i,j,g,1)+(bp(1)+cp(1))*s_x(i+1,j,g,1))/12.0D0
+            s_x(i,j,g,3)=(cm(1)*s_x(i-1,j,g,1)&
+              -(cm(1)+cp(1))*s_x(i,j,g,1)+cp(1)*s_x(i+1,j,g,1))/60.0D0
           ENDIF
         ENDDO
       ENDDO
@@ -919,41 +941,41 @@ CONTAINS
           IF(j .EQ. 1)THEN
             SELECTCASE(bc_opt)
               CASE('reflect','reflective') !reflective on top side
-                s_y(i,j,g,1)=((bm(1)+cm(1))*s_bar_y(i,j,g)&
-                  -(bm(1)+bp(1)+cm(1)+cp(1))*s_bar_y(i,j,g)+(bp(1)+cp(1))*s_bar_y(i,j+1,g))/12.0D0
-                s_y(i,j,g,2)=(cm(1)*s_bar_y(i,j,g)&
-                  -(cm(1)+cp(1))*s_bar_y(i,j,g)+cp(1)*s_bar_y(i,j+1,g))/60.0D0
+                s_y(i,j,g,2)=((bm(1)+cm(1))*s_y(i,j,g,1)&
+                  -(bm(1)+bp(1)+cm(1)+cp(1))*s_y(i,j,g,1)+(bp(1)+cp(1))*s_y(i,j+1,g,1))/12.0D0
+                s_y(i,j,g,3)=(cm(1)*s_y(i,j,g,1)&
+                  -(cm(1)+cp(1))*s_y(i,j,g,1)+cp(1)*s_y(i,j+1,g,1))/60.0D0
               CASE DEFAULT
                 IF(prob_sym .EQ. 'qtr')THEN !reflective on top side
-                  s_y(i,j,g,1)=((bm(1)+cm(1))*s_bar_y(i,j,g)&
-                    -(bm(1)+bp(1)+cm(1)+cp(1))*s_bar_y(i,j,g)+(bp(1)+cp(1))*s_bar_y(i,j+1,g))/12.0D0
-                  s_y(i,j,g,2)=(cm(1)*s_bar_y(i,j,g)&
-                    -(cm(1)+cp(1))*s_bar_y(i,j,g)+cp(1)*s_bar_y(i,j+1,g))/60.0D0
+                  s_y(i,j,g,2)=((bm(1)+cm(1))*s_y(i,j,g,1)&
+                    -(bm(1)+bp(1)+cm(1)+cp(1))*s_y(i,j,g,1)+(bp(1)+cp(1))*s_y(i,j+1,g,1))/12.0D0
+                  s_y(i,j,g,3)=(cm(1)*s_y(i,j,g,1)&
+                    -(cm(1)+cp(1))*s_y(i,j,g,1)+cp(1)*s_y(i,j+1,g,1))/60.0D0
                 ELSE !vacuum on top side
-                  s_y(i,j,g,1)=((bp(2)+cp(2))*s_bar_y(i,j+1,g)-(bp(2)+bpp+cp(2)+cpp)*s_bar_y(i,j,g)&
-                    +(bpp+cpp)*s_bar_y(i,j+2,g))/12.0D0
-                  s_y(i,j,g,2)=(cp(2)*s_bar_y(i,j+1,g)&
-                    -(cp(2)+cpp)*s_bar_y(i,j,g)+cpp*s_bar_y(i,j+2,g))/60.0D0
+                  s_y(i,j,g,2)=((bp(2)+cp(2))*s_y(i,j+1,g,1)-(bp(2)+bpp+cp(2)+cpp)*s_y(i,j,g,1)&
+                    +(bpp+cpp)*s_y(i,j+2,g,1))/12.0D0
+                  s_y(i,j,g,3)=(cp(2)*s_y(i,j+1,g,1)&
+                    -(cp(2)+cpp)*s_y(i,j,g,1)+cpp*s_y(i,j+2,g,1))/60.0D0
                 ENDIF
             ENDSELECT
           ELSEIF(j .EQ. core_y_size)THEN
             SELECTCASE(bc_opt)
               CASE('reflect','reflective') !reflective on bot side
-                s_y(i,j,g,1)=((bm(1)+cm(1))*s_bar_y(i,j-1,g)&
-                  -(bm(1)+bp(1)+cm(1)+cp(1))*s_bar_y(i,j,g)+(bp(1)+cp(1))*s_bar_y(i,j,g))/12.0D0
-                s_y(i,j,g,2)=(cm(1)*s_bar_y(i,j-1,g)&
-                  -(cm(1)+cp(1))*s_bar_y(i,j,g)+cp(1)*s_bar_y(i,j,g))/60.0D0
+                s_y(i,j,g,2)=((bm(1)+cm(1))*s_y(i,j-1,g,1)&
+                  -(bm(1)+bp(1)+cm(1)+cp(1))*s_y(i,j,g,1)+(bp(1)+cp(1))*s_y(i,j,g,1))/12.0D0
+                s_y(i,j,g,3)=(cm(1)*s_y(i,j-1,g,1)&
+                  -(cm(1)+cp(1))*s_y(i,j,g,1)+cp(1)*s_y(i,j,g,1))/60.0D0
               CASE DEFAULT !vacuum on the bot side
-                s_y(i,j,g,1)=((bm(2)+cm(2))*s_bar_y(i,j-1,g)-(bm(2)+bmm+cm(2)+cmm)*s_bar_y(i,j,g)&
-                  +(bmm+cmm)*s_bar_y(i,j-2,g))/12.0D0
-                s_y(i,j,g,2)=(cm(2)*s_bar_y(i,j-1,g)-(cm(2)+cmm)*s_bar_y(i,j,g)&
-                  +cmm*s_bar_y(i,j-2,g))/60.0D0
+                s_y(i,j,g,2)=((bm(2)+cm(2))*s_y(i,j-1,g,1)-(bm(2)+bmm+cm(2)+cmm)*s_y(i,j,g,1)&
+                  +(bmm+cmm)*s_y(i,j-2,g,1))/12.0D0
+                s_y(i,j,g,3)=(cm(2)*s_y(i,j-1,g,1)-(cm(2)+cmm)*s_y(i,j,g,1)&
+                  +cmm*s_y(i,j-2,g,1))/60.0D0
             ENDSELECT
           ELSE  !standard equation, not on the boundary
-            s_y(i,j,g,1)=((bm(1)+cm(1))*s_bar_y(i,j-1,g)&
-              -(bm(1)+bp(1)+cm(1)+cp(1))*s_bar_y(i,j,g)+(bp(1)+cp(1))*s_bar_y(i,j+1,g))/12.0D0
-            s_y(i,j,g,2)=(cm(1)*s_bar_y(i,j-1,g)&
-              -(cm(1)+cp(1))*s_bar_y(i,j,g)+cp(1)*s_bar_y(i,j+1,g))/60.0D0
+            s_y(i,j,g,2)=((bm(1)+cm(1))*s_y(i,j-1,g,1)&
+              -(bm(1)+bp(1)+cm(1)+cp(1))*s_y(i,j,g,1)+(bp(1)+cp(1))*s_y(i,j+1,g,1))/12.0D0
+            s_y(i,j,g,3)=(cm(1)*s_y(i,j-1,g,1)&
+              -(cm(1)+cp(1))*s_y(i,j,g,1)+cp(1)*s_y(i,j+1,g,1))/60.0D0
           ENDIF
         ENDDO
       ENDDO
