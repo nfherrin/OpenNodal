@@ -36,3 +36,6 @@
 
 #workspace in folder
 workspace/
+
+#outputs for manuals
+doc/theorymanual/output
