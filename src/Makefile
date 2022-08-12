@@ -29,7 +29,8 @@ SRC := main.f90 \
 	   input_module.f90 \
 	   output_module.f90 \
 	   solvers_module.f90 \
-	   linalg_module.f90
+	   linalg_module.f90 \
+	   analytic_module.f90
 
 OBJ := $(SRC:.f90=.o)
 
@@ -77,7 +78,7 @@ errors_module.o : globals.o
 globals.o : precisions.o xs_types.o
 input_module.o : globals.o errors_module.o string_module.o edits_module.o
 main.o : errors_module.o globals.o input_module.o output_module.o \
-		solvers_module.o
+		solvers_module.o analytic_module.o
 output_module.o : globals.o
 precisions.o :
 solvers_module.o : globals.o errors_module.o precisions.o string_module.o \
@@ -85,3 +86,4 @@ solvers_module.o : globals.o errors_module.o precisions.o string_module.o \
 string_module.o : precisions.o
 xs_types.o : precisions.o
 linalg_module.o : precisions.o
+analytic_module.o : precisions.o globals.o errors_module.o

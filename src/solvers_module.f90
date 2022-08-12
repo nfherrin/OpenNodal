@@ -25,11 +25,13 @@ CONTAINS
 !> @brief This subroutine solves the nodal problem
 !>
   SUBROUTINE solver_init()
-    INTEGER :: i,ii,j,jj,g,ip,jp,temp_map(core_x_size,core_y_size)
+    INTEGER :: i,ii,j,jj,g,ip,jp
+    INTEGER, ALLOCATABLE :: temp_map(:,:)
 
     IF(nsplit .GT. 1)THEN
       !in this case we are splitting the system and need to remake the assemply map
       !and recompute the core_x_size and core_y_size
+      ALLOCATE(temp_map(core_x_size,core_y_size))
       temp_map=assm_map
       DEALLOCATE(assm_map)
       ALLOCATE(assm_map(nsplit*core_x_size,nsplit*core_y_size))
@@ -50,6 +52,7 @@ CONTAINS
       core_x_size=nsplit*core_x_size
       core_y_size=nsplit*core_y_size
       assm_pitch=assm_pitch/(nsplit*1.0D0)
+      DEALLOCATE(temp_map)
     ENDIF
     xkeff = 1d0
     allocate(xflux(core_x_size,core_y_size,num_eg))
@@ -425,7 +428,7 @@ CONTAINS
           !set bvec to fission source
           bvec(cell_idx)=fiss_src*assm_xs(loc_id)%chi(g)/xkeff
           ! TODO scattering should be in LHS
-          !and add scattering source
+          ! TODO scattering transposed...
           DO gp=1,num_eg
             bvec(cell_idx)=bvec(cell_idx)+xflux(i,j,gp)*assm_xs(loc_id)%sigma_scat(g,gp)
           ENDDO

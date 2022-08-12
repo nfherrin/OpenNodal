@@ -59,6 +59,10 @@ MODULE globals
   !>  flux convergence tolerance
   REAL(kr8) :: tol_xflux = 1d-5
 
+  ! TODO data from user input should probably be in the inputs module...
+  ! TODO this needs to be added to input
+  character(16) :: anal_ref = '2d2g'
+
   !> nsplit value, for decomposing nodes into nsplit number of sub-nodes
   INTEGER(ki4) :: nsplit=1
 

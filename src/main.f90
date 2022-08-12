@@ -3,7 +3,8 @@
 !> @brief Program driver. A Fortran based nodal solver
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++!
 PROGRAM opennodal
-  use errors_module
+  USE analytic_module
+  USE errors_module
   USE globals
   USE input_module
   USE output_module
@@ -32,6 +33,8 @@ PROGRAM opennodal
     CALL solver_init()
 
     CALL solver()
+
+    if (anal_ref /= 'NONE') call anal (xkeff, xflux, anal_ref)
 
     deallocate(xflux)
 
