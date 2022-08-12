@@ -10,7 +10,7 @@ MODULE solvers_module
   PRIVATE
   PUBLIC :: solver,solver_init
 
-  CHARACTER(*), PARAMETER :: inner_solve_method = 'sor'
+  CHARACTER(*), PARAMETER :: inner_solve_method = 'dgesv'
 
 CONTAINS
 
@@ -203,8 +203,8 @@ CONTAINS
       CALL build_bvec(bvec)
 
       ! TODO implement inner tolerances
-      CALL inner_solve(inner_solve_method, prob_size, 1d-3*MIN(tol_xflux,tol_xkeff), 10000, &
-                       amat, bvec, xflux)
+      CALL inner_solve(inner_solve_method, prob_size, 1d-3*MIN(tol_xflux,tol_xkeff), &
+                        MAX(10000,100*tol_max_iter), amat, bvec, xflux)
 
       CALL calc_fiss_src_sum(fiss_src_sum(2))
 
@@ -227,7 +227,7 @@ CONTAINS
       keff_old=xkeff
       flux_old=xflux
       fiss_src_sum(1) = fiss_src_sum(2)
-
+      CALL debug_eigen(amat)
       CALL print_log(TRIM(str(iter,4))//'   '//TRIM(str(xkeff,6,'F'))//'   '//TRIM(str(conv_xkeff,2)) &
         //'   '//TRIM(str(conv_xflux,2)))
       IF(nodal_method .EQ. 'poly')THEN
@@ -272,11 +272,10 @@ CONTAINS
             amatrix(1,cell_idx)=amatrix(1,cell_idx)&
               +2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
               +assm_pitch/assm_xs(assm_map(i-1,j))%D(g))**(-1)-dtilde_x(i,j,g)
-            amatrix(2,cell_idx)=amatrix(2,cell_idx)&
-              -2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
+            amatrix(2,cell_idx)=-2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
               +assm_pitch/assm_xs(assm_map(i-1,j))%D(g))**(-1)-dtilde_x(i,j,g)
           ELSE
-            !boundary condition specified by the dtilde factor computation in the polynomial portion
+            !boundary condition specified by the dtilde factor
             amatrix(1,cell_idx)=amatrix(1,cell_idx)+dtilde_x(i,j,g)
           ENDIF
           !right term
@@ -284,11 +283,10 @@ CONTAINS
             amatrix(1,cell_idx)=amatrix(1,cell_idx)&
               +2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
               +assm_pitch/assm_xs(assm_map(i+1,j))%D(g))**(-1)+dtilde_x(i+1,j,g)
-            amatrix(3,cell_idx)=amatrix(3,cell_idx)&
-              -2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
+            amatrix(3,cell_idx)=-2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
               +assm_pitch/assm_xs(assm_map(i+1,j))%D(g))**(-1)+dtilde_x(i+1,j,g)
           ELSE
-            !boundary condition specified by the dtilde factor computation in the polynomial portion
+            !boundary condition specified by the dtilde factor
             amatrix(1,cell_idx)=amatrix(1,cell_idx)+dtilde_x(i+1,j,g)
           ENDIF
           !below term
@@ -296,11 +294,10 @@ CONTAINS
             amatrix(1,cell_idx)=amatrix(1,cell_idx)&
               +2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
               +assm_pitch/assm_xs(assm_map(i,j-1))%D(g))**(-1)-dtilde_y(i,j,g)
-            amatrix(4,cell_idx)=amatrix(4,cell_idx)&
-              -2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
+            amatrix(4,cell_idx)=-2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
               +assm_pitch/assm_xs(assm_map(i,j-1))%D(g))**(-1)-dtilde_y(i,j,g)
           ELSE
-            !boundary condition specified by the dtilde factor computation in the polynomial portion
+            !boundary condition specified by the dtilde factor
             amatrix(1,cell_idx)=amatrix(1,cell_idx)+dtilde_y(i,j,g)
           ENDIF
           !above term
@@ -308,11 +305,10 @@ CONTAINS
             amatrix(1,cell_idx)=amatrix(1,cell_idx)&
               +2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
               +assm_pitch/assm_xs(assm_map(i,j+1))%D(g))**(-1)+dtilde_y(i,j+1,g)
-            amatrix(5,cell_idx)=amatrix(5,cell_idx)&
-              -2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
+            amatrix(5,cell_idx)=-2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
               +assm_pitch/assm_xs(assm_map(i,j+1))%D(g))**(-1)+dtilde_y(i,j+1,g)
           ELSE
-            !boundary condition specified by the dtilde factor computation in the polynomial portion
+            !boundary condition specified by the dtilde factor
             amatrix(1,cell_idx)=amatrix(1,cell_idx)+dtilde_y(i,j+1,g)
           ENDIF
         ENDDO
@@ -432,7 +428,7 @@ CONTAINS
           fiss_src=fiss_src+xflux(i,j,gp)*assm_xs(loc_id)%nusigma_f(gp)
         ENDDO
         DO g=1,num_eg
-          cell_idx=(g-1)*core_y_size*core_x_size+(j-1)*core_x_size+i
+          cell_idx=calc_idx(i,j,g)
           !set bvec to fission source
           bvec(cell_idx)=fiss_src*assm_xs(loc_id)%chi(g)/xkeff
           ! TODO scattering should be in LHS
@@ -574,4 +570,44 @@ CONTAINS
       WRITE(*,'(10000ES16.8)')s_bar_y(:,j,1)
     ENDDO
   ENDSUBROUTINE comp_s
+
+  SUBROUTINE debug_eigen(amatrix)
+    REAL(kr8), INTENT(OUT) :: amatrix(:,:)
+    INTEGER(ki4) :: num,denom,cell_idx,neigh_idx,g,gp,i,j,loc_id
+    REAL(kr8) :: balance(core_x_size,core_y_size,num_eg)
+
+    ! (1   , 2   , 3    , 4     , 5   )
+    ! (diag, left, right, below, above)
+    ! (diag, left, right, down , up   )
+    ! (diag, west, east , south, north)
+    num=0.0D0
+    denom=0.0D0
+    balance=0.0D0
+    !compute neutron balance
+    DO i=1,core_x_size
+      DO j=1,core_y_size
+        loc_id=assm_map(i,j)
+        DO g=1,num_eg
+          cell_idx=calc_idx(i,j,g)
+          !Add up neutron balance equation
+
+          !LHS contribution
+          balance(i,j,g)=xflux(i,j,g)*amatrix(1,cell_idx) !diagonal contrib
+          IF(i .NE. 1)balance(i,j,g)=balance(i,j,g)+xflux(i-1,j,g)*amatrix(2,cell_idx) !left contrib
+          IF(i .NE. core_x_size)balance(i,j,g)=balance(i,j,g)+xflux(i+1,j,g)*amatrix(3,cell_idx) !right contrib
+          IF(j .NE. 1)balance(i,j,g)=balance(i,j,g)+xflux(i,j-1,g)*amatrix(4,cell_idx) !right contrib
+          IF(j .NE. core_y_size)balance(i,j,g)=balance(i,j,g)+xflux(i,j+1,g)*amatrix(5,cell_idx) !right contrib
+
+          !RHS subtraction
+          DO gp=1,num_eg
+            balance(i,j,g)=balance(i,j,g)-xflux(i,j,gp)*assm_xs(loc_id)%sigma_scat(g,gp)!scattering
+            balance(i,j,g)=balance(i,j,g)-xflux(i,j,gp)*assm_xs(loc_id)%nusigma_f(gp)*assm_xs(loc_id)%chi(g)/xkeff!fission
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+    balance=-balance
+    WRITE(*,*)'balance error',MAXVAL(ABS(balance))
+    !stop 'debug_eigen not yet complete'
+  ENDSUBROUTINE debug_eigen
 ENDMODULE solvers_module

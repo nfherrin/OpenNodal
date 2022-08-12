@@ -28,7 +28,7 @@ CONTAINS
         flux_ratio = assm_xs(i)%sigma_scat(2,1)/assm_xs(i)%sigma_a(2)
         kinf = (assm_xs(i)%nusigma_f(1) + assm_xs(i)%nusigma_f(2)*flux_ratio) / &
           (assm_xs(i)%sigma_a(1) + assm_xs(i)%sigma_scat(2,1))
-        CALL print_log('kinf '//TRIM(ADJUSTL(assm_xs(i)%mat_id))//' '//str(kinf,6,'F'))
+        CALL print_log('kinf '//TRIM(ADJUSTL(assm_xs(i)%mat_id))//' '//str(kinf,16,'F'))
       ENDIF
     ENDDO
 

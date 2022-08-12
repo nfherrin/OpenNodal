@@ -1,9 +1,9 @@
 OpenNodal_INP_V1
 [CASE_DETAILS]
   title 'Steady state 2D Uniform Core'
-  nsplit 1
-  k_eps 1.0D-10
-  phi_eps 1.0D-10
+  nsplit 4
+  k_eps 1.0D-15
+  phi_eps 1.0D-15
   max_its 10000
   nodal_method fd
 
