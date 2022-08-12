@@ -53,36 +53,105 @@ CONTAINS
     return
   endsubroutine anal
 
+  real(kr8) function calc_keff (anal_ref)
+    use globals, only : assm_xs, assm_map, assm_pitch, core_x_size, core_y_size
+    use errors_module, only : fatal_error
+    IMPLICIT NONE
+    character(*), intent(in) :: anal_ref
+
+    real(kr8) :: Lx, Ly
+    real(kr8) :: bsq_geo
+    integer   :: mat_num
+    
+    select case (anal_ref)
+      case ('2d2g')
+        Lx = assm_pitch*core_x_size
+        Ly = assm_pitch*core_y_size
+        bsq_geo = (pi/Lx)**2 + (pi/Ly)**2
+        mat_num = assm_map(1,1)
+        calc_keff = (assm_xs(mat_num)%nusigma_f(1) + &
+          assm_xs(mat_num)%nusigma_f(2)*calc_frat(anal_ref)) / &
+          (assm_xs(mat_num)%D(1)*bsq_geo + &
+          (assm_xs(mat_num)%sigma_t(1) - assm_xs(mat_num)%sigma_scat(1,1)))
+        return
+      case default
+        call fatal_error (&
+          'analytic keff calculation not implemented for reference problem: ' &
+          // anal_ref)
+    endselect
+
+  endfunction calc_keff
+
   subroutine anal_keff (xkeff, anal_ref)
+    use errors_module, only : fatal_error
+    use globals, only : print_log
+    use string_module, only : str
     IMPLICIT NONE
     real(kr8), intent(in) :: xkeff
     character(*), intent(in) :: anal_ref
+
+    real(kr8) :: anal, calc, err
+
+    select case (anal_ref)
+      case ('2d2g')
+        anal = calc_keff(anal_ref)
+        calc = xkeff
+      case default
+        call fatal_error (&
+          'analytic keff calculation not implemented for reference problem: ' &
+          // anal_ref)
+    endselect
+
+    err = (anal - calc)*1d5
+
+    call print_log('XKEFF_anal = ' // str(anal, 10, 'f'))
+    call print_log('XKEFF_calc = ' // str(calc, 10, 'f'))
+    call print_log('XKEFF_err  = ' // str(err , 6, 'f'))
+
     return
   endsubroutine anal_keff
 
+  real(kr8) function calc_frat (anal_ref)
+    use globals, only : assm_xs, assm_map, assm_pitch, core_x_size, core_y_size
+    use errors_module, only : fatal_error
+    IMPLICIT NONE
+    character(*), intent(in) :: anal_ref
+
+    real(kr8) :: Lx, Ly
+    real(kr8) :: bsq_geo
+    integer   :: mat_num
+
+    select case (anal_ref)
+      case ('2d2g')
+        Lx = assm_pitch*core_x_size
+        Ly = assm_pitch*core_y_size
+        bsq_geo = (pi/Lx)**2 + (pi/Ly)**2
+        mat_num = assm_map(1,1)
+        calc_frat = assm_xs(mat_num)%sigma_scat(2,1) / &
+          (assm_xs(mat_num)%D(2)*bsq_geo + &
+          (assm_xs(mat_num)%sigma_t(2)-assm_xs(mat_num)%sigma_scat(2,2))) ! TODO rewrite with sigma_r
+        return
+      case default
+        call fatal_error (&
+          'analytic ratio calculation not implemented for reference problem: ' &
+          // anal_ref)
+    endselect
+
+  endfunction calc_frat
+
   subroutine anal_frat (xflux, anal_ref)
     use errors_module, only : fatal_error
-    use globals, only : assm_xs, print_log
+    use globals, only : print_log
     use string_module, only : str
     IMPLICIT NONE
     real(kr8), intent(in) :: xflux(:,:,:)
     character(*), intent(in) :: anal_ref
 
-    real(kr8) :: Lx, Ly
-    real(kr8) :: bsq_geo
     real(kr8) :: anal, calc, err
 
     select case (anal_ref)
       case ('2d2g')
-        Lx = 1d2
-        Ly = 1d2
-        bsq_geo = (pi/Lx)**2 + (pi/Ly)**2
-        anal = assm_xs(2)%sigma_scat(2,1) / &
-          (assm_xs(2)%D(2)*bsq_geo + &
-          (assm_xs(2)%sigma_t(2)-assm_xs(2)%sigma_scat(2,2))) ! TODO rewrite with sigma_r
-        write(0,*) 'sigma_s(2,1)=', assm_xs(2)%sigma_scat(2,1)
-        write(0,*) 'D(2)        =', assm_xs(2)%D(2)
-        write(0,*) 'sigma_r(2)  =', assm_xs(2)%sigma_t(2)-assm_xs(2)%sigma_scat(2,2)
+        anal = calc_frat(anal_ref)
         calc = maxval(abs(xflux(:,:,2))) / maxval(abs(xflux(:,:,1))) ! TODO rewrite with inf norm
       case default
         call fatal_error (&
