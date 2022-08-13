@@ -606,6 +606,30 @@ CONTAINS
         ENDDO
       ENDDO
     ENDDO
+
+    !compute eigenvalue
+    DO i=1,core_x_size
+      DO j=1,core_y_size
+        loc_id=assm_map(i,j)
+        DO g=1,num_eg
+          cell_idx=calc_idx(i,j,g)
+          !Add up neutron balance equation
+
+          !LHS contribution
+          balance(i,j,g)=xflux(i,j,g)*amatrix(1,cell_idx) !diagonal contrib
+          IF(i .NE. 1)balance(i,j,g)=balance(i,j,g)+xflux(i-1,j,g)*amatrix(2,cell_idx) !left contrib
+          IF(i .NE. core_x_size)balance(i,j,g)=balance(i,j,g)+xflux(i+1,j,g)*amatrix(3,cell_idx) !right contrib
+          IF(j .NE. 1)balance(i,j,g)=balance(i,j,g)+xflux(i,j-1,g)*amatrix(4,cell_idx) !right contrib
+          IF(j .NE. core_y_size)balance(i,j,g)=balance(i,j,g)+xflux(i,j+1,g)*amatrix(5,cell_idx) !right contrib
+
+          !RHS subtraction
+          DO gp=1,num_eg
+            balance(i,j,g)=balance(i,j,g)-xflux(i,j,gp)*assm_xs(loc_id)%sigma_scat(g,gp)!scattering
+            balance(i,j,g)=balance(i,j,g)-xflux(i,j,gp)*assm_xs(loc_id)%nusigma_f(gp)*assm_xs(loc_id)%chi(g)/xkeff!fission
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
     balance=-balance
     WRITE(*,*)'balance error',MAXVAL(ABS(balance))
     !stop 'debug_eigen not yet complete'
