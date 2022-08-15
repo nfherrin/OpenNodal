@@ -227,7 +227,6 @@ CONTAINS
       keff_old=xkeff
       flux_old=xflux
       fiss_src_sum(1) = fiss_src_sum(2)
-      CALL debug_eigen(amat)
       CALL print_log(TRIM(str(iter,4))//'   '//TRIM(str(xkeff,6,'F'))//'   '//TRIM(str(conv_xkeff,2)) &
         //'   '//TRIM(str(conv_xflux,2)))
       IF(nodal_method .EQ. 'poly')THEN
@@ -238,6 +237,7 @@ CONTAINS
       IF ((conv_xflux < tol_xflux) .AND. (conv_xkeff < tol_xkeff)) EXIT
 
     ENDDO ! iter = 1,tol_max_iter
+    CALL debug_eigen(amat)
 
     DO j=1,core_y_size
       !write(*,'(10000ES16.8)')xflux(:,j,1)
@@ -276,7 +276,7 @@ CONTAINS
               +assm_pitch/assm_xs(assm_map(i-1,j))%D(g))**(-1)-dtilde_x(i,j,g)
           ELSE
             !boundary condition specified by the dtilde factor
-            amatrix(1,cell_idx)=amatrix(1,cell_idx)+dtilde_x(i,j,g)
+            amatrix(1,cell_idx)=amatrix(1,cell_idx)-dtilde_x(i,j,g)
           ENDIF
           !right term
           IF(i .NE. core_x_size)THEN
@@ -298,7 +298,7 @@ CONTAINS
               +assm_pitch/assm_xs(assm_map(i,j-1))%D(g))**(-1)-dtilde_y(i,j,g)
           ELSE
             !boundary condition specified by the dtilde factor
-            amatrix(1,cell_idx)=amatrix(1,cell_idx)+dtilde_y(i,j,g)
+            amatrix(1,cell_idx)=amatrix(1,cell_idx)-dtilde_y(i,j,g)
           ENDIF
           !above term
           IF(j .NE. core_y_size)THEN
@@ -573,8 +573,9 @@ CONTAINS
 
   SUBROUTINE debug_eigen(amatrix)
     REAL(kr8), INTENT(OUT) :: amatrix(:,:)
-    INTEGER(ki4) :: num,denom,cell_idx,neigh_idx,g,gp,i,j,loc_id
-    REAL(kr8) :: balance(core_x_size,core_y_size,num_eg)
+    INTEGER(ki4) :: cell_idx,neigh_idx,g,gp,i,j,loc_id
+    REAL(kr8) :: balance(core_x_size,core_y_size,num_eg),leakage,num,denom
+    LOGICAL :: conv_check=.TRUE.
 
     ! (1   , 2   , 3    , 4     , 5   )
     ! (diag, left, right, below, above)
@@ -591,47 +592,184 @@ CONTAINS
           cell_idx=calc_idx(i,j,g)
           !Add up neutron balance equation
 
-          !LHS contribution
-          balance(i,j,g)=xflux(i,j,g)*amatrix(1,cell_idx) !diagonal contrib
-          IF(i .NE. 1)balance(i,j,g)=balance(i,j,g)+xflux(i-1,j,g)*amatrix(2,cell_idx) !left contrib
-          IF(i .NE. core_x_size)balance(i,j,g)=balance(i,j,g)+xflux(i+1,j,g)*amatrix(3,cell_idx) !right contrib
-          IF(j .NE. 1)balance(i,j,g)=balance(i,j,g)+xflux(i,j-1,g)*amatrix(4,cell_idx) !right contrib
-          IF(j .NE. core_y_size)balance(i,j,g)=balance(i,j,g)+xflux(i,j+1,g)*amatrix(5,cell_idx) !right contrib
+          IF(conv_check)THEN
+            !LHS contribution
+            balance(i,j,g)=xflux(i,j,g)*amatrix(1,cell_idx) !diagonal contrib
+            IF(i .NE. 1)balance(i,j,g)=balance(i,j,g)+xflux(i-1,j,g)*amatrix(2,cell_idx) !left contrib
+            IF(i .NE. core_x_size)balance(i,j,g)=balance(i,j,g)+xflux(i+1,j,g)*amatrix(3,cell_idx) !right contrib
+            IF(j .NE. 1)balance(i,j,g)=balance(i,j,g)+xflux(i,j-1,g)*amatrix(4,cell_idx) !right contrib
+            IF(j .NE. core_y_size)balance(i,j,g)=balance(i,j,g)+xflux(i,j+1,g)*amatrix(5,cell_idx) !right contrib
+          ELSE
+            !LHS contribution
+            balance(i,j,g)=xflux(i,j,g)*assm_xs(loc_id)%sigma_t(g) !collision
+            IF(i .NE. 1)THEN !left leakage
+              leakage=-(assm_pitch/(2.0D0*assm_xs(loc_id)%D(g)) &
+                +assm_pitch/(2.0D0*assm_xs(assm_map(i-1,j))%D(g)))**(-1) &
+                *(xflux(i,j,g)-xflux(i-1,j,g))/assm_pitch&
+                +dtilde_x(i,j,g)*(xflux(i,j,g)+xflux(i-1,j,g))/assm_pitch
+            ELSE !boundary condition
+              leakage=xflux(i,j,g)*dtilde_x(i,j,g)/assm_pitch
+            ENDIF
+            balance(i,j,g)=balance(i,j,g)-leakage
+
+            IF(i .NE. core_x_size)THEN !right leakage
+              leakage=-(assm_pitch/(2.0D0*assm_xs(assm_map(i+1,j))%D(g)) &
+                +assm_pitch/(2.0D0*assm_xs(loc_id)%D(g)))**(-1) &
+                *(xflux(i+1,j,g)-xflux(i,j,g))/assm_pitch&
+                +dtilde_x(i+1,j,g)*(xflux(i+1,j,g)+xflux(i,j,g))/assm_pitch
+            ELSE !boundary condition
+              leakage=xflux(i,j,g)*dtilde_x(i+1,j,g)/assm_pitch
+            ENDIF
+            balance(i,j,g)=balance(i,j,g)+leakage
+
+            IF(j .NE. 1)THEN !top leakage
+              leakage=-(assm_pitch/(2.0D0*assm_xs(loc_id)%D(g)) &
+                +assm_pitch/(2.0D0*assm_xs(assm_map(i,j-1))%D(g)))**(-1) &
+                *(xflux(i,j,g)-xflux(i,j-1,g))/assm_pitch&
+                +dtilde_y(i,j+1,g)*(xflux(i,j,g)+xflux(i,j-1,g))/assm_pitch
+            ELSE !boundary condition
+              leakage=xflux(i,j,g)*dtilde_y(i,j,g)/assm_pitch
+            ENDIF
+            balance(i,j,g)=balance(i,j,g)-leakage
+
+            IF(j .NE. core_y_size)THEN !bot leakage
+              leakage=-(assm_pitch/(2.0D0*assm_xs(assm_map(i,j+1))%D(g)) &
+                +assm_pitch/(2.0D0*assm_xs(loc_id)%D(g)))**(-1) &
+                *(xflux(i,j+1,g)-xflux(i,j,g))/assm_pitch&
+                +dtilde_y(i,j+1,g)*(xflux(i,j+1,g)+xflux(i,j,g))/assm_pitch
+            ELSE !boundary condition
+              leakage=xflux(i,j,g)*dtilde_y(i,j+1,g)/assm_pitch
+            ENDIF
+            balance(i,j,g)=balance(i,j,g)+leakage
+            IF(i .EQ. 1 .and. j .eq. 1 .and. g .eq. 1)THEN
+              write(*,*)balance(i,j,g),xflux(i,j,g)*amatrix(1,cell_idx)+amatrix(3,cell_idx)*xflux(i+1,j,g)&
+                +amatrix(5,cell_idx)*xflux(i,j+1,g)
+            ENDIF
+          ENDIF
 
           !RHS subtraction
           DO gp=1,num_eg
-            balance(i,j,g)=balance(i,j,g)-xflux(i,j,gp)*assm_xs(loc_id)%sigma_scat(g,gp)!scattering
-            balance(i,j,g)=balance(i,j,g)-xflux(i,j,gp)*assm_xs(loc_id)%nusigma_f(gp)*assm_xs(loc_id)%chi(g)/xkeff!fission
-          ENDDO
-        ENDDO
-      ENDDO
-    ENDDO
-
-    !compute eigenvalue
-    DO i=1,core_x_size
-      DO j=1,core_y_size
-        loc_id=assm_map(i,j)
-        DO g=1,num_eg
-          cell_idx=calc_idx(i,j,g)
-          !Add up neutron balance equation
-
-          !LHS contribution
-          balance(i,j,g)=xflux(i,j,g)*amatrix(1,cell_idx) !diagonal contrib
-          IF(i .NE. 1)balance(i,j,g)=balance(i,j,g)+xflux(i-1,j,g)*amatrix(2,cell_idx) !left contrib
-          IF(i .NE. core_x_size)balance(i,j,g)=balance(i,j,g)+xflux(i+1,j,g)*amatrix(3,cell_idx) !right contrib
-          IF(j .NE. 1)balance(i,j,g)=balance(i,j,g)+xflux(i,j-1,g)*amatrix(4,cell_idx) !right contrib
-          IF(j .NE. core_y_size)balance(i,j,g)=balance(i,j,g)+xflux(i,j+1,g)*amatrix(5,cell_idx) !right contrib
-
-          !RHS subtraction
-          DO gp=1,num_eg
-            balance(i,j,g)=balance(i,j,g)-xflux(i,j,gp)*assm_xs(loc_id)%sigma_scat(g,gp)!scattering
+            balance(i,j,g)=balance(i,j,g)-xflux(i,j,gp)*assm_xs(loc_id)%sigma_scat(g,gp)!inscattering
             balance(i,j,g)=balance(i,j,g)-xflux(i,j,gp)*assm_xs(loc_id)%nusigma_f(gp)*assm_xs(loc_id)%chi(g)/xkeff!fission
           ENDDO
         ENDDO
       ENDDO
     ENDDO
     balance=-balance
-    WRITE(*,*)'balance error',MAXVAL(ABS(balance))
+    DO j=1,core_y_size
+      write(*,'(1000ES12.4)')balance(:,j,1)
+    ENDDO
+    WRITE(*,'(A,10000ES16.8)')'balance error: ',MAXVAL(ABS(balance))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    i=1
+    j=1
+    g=1
+    cell_idx=calc_idx(i,j,g)
+    loc_id=assm_map(i,j)
+!check them one at a time
+    num=0.0D0
+    leakage=0.0D0
+    denom=0.0D0
+    !total xs term for the base of the A matrix diagonal
+    denom=assm_xs(assm_map(i,j))%sigma_t(g)*assm_pitch*xflux(i,j,g)/assm_pitch
+    !LHS contribution
+    num=xflux(i,j,g)*assm_xs(loc_id)%sigma_t(g) !collision
+    write(*,*)'point1',num,denom
+    IF(i .NE. 1)THEN !left leakage
+      leakage=-(assm_pitch/(2.0D0*assm_xs(loc_id)%D(g)) &
+        +assm_pitch/(2.0D0*assm_xs(assm_map(i-1,j))%D(g)))**(-1) &
+        *(xflux(i,j,g))/assm_pitch&
+        +dtilde_x(i,j,g)*(xflux(i,j,g))/assm_pitch
+    ELSE !boundary condition
+      leakage=xflux(i,j,g)*dtilde_x(i,j,g)/assm_pitch
+    ENDIF
+    num=num-leakage
+    !left term
+    IF(i .NE. 1)THEN
+      denom=denom&
+        +(2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
+        +assm_pitch/assm_xs(assm_map(i-1,j))%D(g))**(-1)-dtilde_x(i,j,g))*xflux(i,j,g)/assm_pitch
+    ELSE
+      !boundary condition specified by the dtilde factor
+      denom=denom-dtilde_x(i,j,g)*xflux(i,j,g)/assm_pitch
+    ENDIF
+    write(*,*)'point2',num,denom
+
+    IF(i .NE. core_x_size)THEN !right leakage
+      leakage=-(assm_pitch/(2.0D0*assm_xs(assm_map(i+1,j))%D(g)) &
+        +assm_pitch/(2.0D0*assm_xs(loc_id)%D(g)))**(-1) &
+        *(-xflux(i,j,g))/assm_pitch&
+        +dtilde_x(i+1,j,g)*(xflux(i,j,g))/assm_pitch
+    ELSE !boundary condition
+      leakage=xflux(i,j,g)*dtilde_x(i+1,j,g)/assm_pitch
+    ENDIF
+    num=num+leakage
+    !right term
+    IF(i .NE. core_x_size)THEN
+      denom=denom&
+        +(2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
+        +assm_pitch/assm_xs(assm_map(i+1,j))%D(g))**(-1)+dtilde_x(i+1,j,g))*xflux(i,j,g)/assm_pitch
+    ELSE
+      !boundary condition specified by the dtilde factor
+      denom=denom+dtilde_x(i+1,j,g)*xflux(i,j,g)/assm_pitch
+    ENDIF
+    write(*,*)'point3',num,denom
+
+    IF(j .NE. 1)THEN !top leakage
+      leakage=-(assm_pitch/(2.0D0*assm_xs(loc_id)%D(g)) &
+        +assm_pitch/(2.0D0*assm_xs(assm_map(i,j-1))%D(g)))**(-1) &
+        *(xflux(i,j,g))/assm_pitch&
+        +dtilde_y(i,j,g)*(xflux(i,j,g))/assm_pitch
+    ELSE !boundary condition
+      leakage=xflux(i,j,g)*dtilde_y(i,j,g)/assm_pitch
+    ENDIF
+    num=num-leakage
+    !below term
+    IF(j .NE. 1)THEN
+      denom=denom&
+        +(2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
+        +assm_pitch/assm_xs(assm_map(i,j-1))%D(g))**(-1)-dtilde_y(i,j,g))*xflux(i,j,g)/assm_pitch
+    ELSE
+      !boundary condition specified by the dtilde factor
+      denom=denom-dtilde_y(i,j,g)*xflux(i,j,g)/assm_pitch
+    ENDIF
+    write(*,*)'point4',num,denom
+
+    IF(j .NE. core_y_size)THEN !bot leakage
+      leakage=-(assm_pitch/(2.0D0*assm_xs(assm_map(i,j+1))%D(g)) &
+        +assm_pitch/(2.0D0*assm_xs(loc_id)%D(g)))**(-1) &
+        *(-xflux(i,j,g))/assm_pitch&
+        +dtilde_y(i,j+1,g)*(xflux(i,j,g))/assm_pitch
+    ELSE !boundary condition
+      leakage=xflux(i,j,g)*dtilde_y(i,j+1,g)/assm_pitch
+    ENDIF
+    num=num+leakage
+    !above term
+    IF(j .NE. core_y_size)THEN
+      denom=denom&
+        +(2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
+        +assm_pitch/assm_xs(assm_map(i,j+1))%D(g))**(-1)+dtilde_y(i,j+1,g))*xflux(i,j,g)/assm_pitch
+    ELSE
+      !boundary condition specified by the dtilde factor
+      denom=denom+dtilde_y(i,j+1,g)*xflux(i,j,g)/assm_pitch
+    ENDIF
+    write(*,*)'point5',num,denom
+
+    write(*,*)num,denom,xflux(i,j,g)*amatrix(1,cell_idx)
     !stop 'debug_eigen not yet complete'
   ENDSUBROUTINE debug_eigen
 ENDMODULE solvers_module
