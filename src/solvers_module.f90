@@ -62,7 +62,7 @@ CONTAINS
     !set initial CMFD boundary conditions for dtilde
     SELECT CASE(prob_sym)
       CASE('full') !vacuum on all sides
-        dtilde_x(1,:,:)=0.5d0
+        dtilde_x(1,:,:)=-0.5d0
         dtilde_x(core_x_size+1,:,:)=0.5d0
       CASE('qtr','half') !vacuum on right and bot sides or on right bot and top sides
         dtilde_x(core_x_size+1,:,:)=0.5d0
@@ -71,7 +71,7 @@ CONTAINS
     ENDSELECT
     SELECT CASE(prob_sym)
       CASE('full','half') !vacuum on all sides or right and top/bot sides
-        dtilde_y(:,1,:)=0.5d0
+        dtilde_y(:,1,:)=-0.5d0
         dtilde_y(:,core_y_size+1,:)=0.5d0
       CASE('qtr')!vacuum on right and bot sides
         dtilde_y(:,core_y_size+1,:)=0.5d0
@@ -575,7 +575,7 @@ CONTAINS
     REAL(kr8), INTENT(OUT) :: amatrix(:,:)
     INTEGER(ki4) :: cell_idx,neigh_idx,g,gp,i,j,loc_id
     REAL(kr8) :: balance(core_x_size,core_y_size,num_eg),leakage,num,denom
-    LOGICAL :: conv_check=.TRUE.
+    LOGICAL :: conv_check=.FALSE.
 
     ! (1   , 2   , 3    , 4     , 5   )
     ! (diag, left, right, below, above)
@@ -626,7 +626,7 @@ CONTAINS
               leakage=-(assm_pitch/(2.0D0*assm_xs(loc_id)%D(g)) &
                 +assm_pitch/(2.0D0*assm_xs(assm_map(i,j-1))%D(g)))**(-1) &
                 *(xflux(i,j,g)-xflux(i,j-1,g))/assm_pitch&
-                +dtilde_y(i,j+1,g)*(xflux(i,j,g)+xflux(i,j-1,g))/assm_pitch
+                +dtilde_y(i,j,g)*(xflux(i,j,g)+xflux(i,j-1,g))/assm_pitch
             ELSE !boundary condition
               leakage=xflux(i,j,g)*dtilde_y(i,j,g)/assm_pitch
             ENDIF
@@ -641,10 +641,10 @@ CONTAINS
               leakage=xflux(i,j,g)*dtilde_y(i,j+1,g)/assm_pitch
             ENDIF
             balance(i,j,g)=balance(i,j,g)+leakage
-            IF(i .EQ. 1 .and. j .eq. 1 .and. g .eq. 1)THEN
-              write(*,*)balance(i,j,g),xflux(i,j,g)*amatrix(1,cell_idx)+amatrix(3,cell_idx)*xflux(i+1,j,g)&
-                +amatrix(5,cell_idx)*xflux(i,j+1,g)
-            ENDIF
+          ENDIF
+          IF(i .EQ. 1 .and. j .eq. core_y_size .and. g .eq. 1)THEN
+            write(*,*)balance(i,j,g),xflux(i,j,g)*amatrix(1,cell_idx)+amatrix(3,cell_idx)*xflux(i+1,j,g)&
+              +amatrix(5,cell_idx)*xflux(i,j+1,g)
           ENDIF
 
           !RHS subtraction
@@ -674,9 +674,8 @@ CONTAINS
 
 
 
-
     i=1
-    j=1
+    j=core_y_size
     g=1
     cell_idx=calc_idx(i,j,g)
     loc_id=assm_map(i,j)
