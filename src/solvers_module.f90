@@ -209,7 +209,6 @@ CONTAINS
       CALL calc_fiss_src_sum(fiss_src_sum(2))
 
       IF (iter > 1) xkeff=xkeff*fiss_src_sum(2)/fiss_src_sum(1)
-      CALL debug_eigen(amat)
       conv_xkeff=ABS(xkeff-keff_old) ! absolute
 
       ! maximal relative change in flux
@@ -228,6 +227,7 @@ CONTAINS
       keff_old=xkeff
       flux_old=xflux
       fiss_src_sum(1) = fiss_src_sum(2)
+      CALL debug_eigen(amat)
       CALL print_log(TRIM(str(iter,4))//'   '//TRIM(str(xkeff,6,'F'))//'   '//TRIM(str(conv_xkeff,2)) &
         //'   '//TRIM(str(conv_xflux,2)))
       IF(nodal_method .EQ. 'poly')THEN
@@ -653,50 +653,30 @@ CONTAINS
         DO g=1,num_eg
           cell_idx=calc_idx(i,j,g)
 
-          !collision contribution
+          !collision
           col=col+xflux(i,j,g)*assm_xs(loc_id)%sigma_t(g)
 
-          !leakage contribution
+          !leakage
           balance(i,j,g)=xflux(i,j,g)*assm_xs(loc_id)%sigma_t(g) !collision
-          IF(i .NE. 1)THEN !left leakage
-            leakage=-(assm_pitch/(2.0D0*assm_xs(loc_id)%D(g)) &
-              +assm_pitch/(2.0D0*assm_xs(assm_map(i-1,j))%D(g)))**(-1) &
-              *(xflux(i,j,g)-xflux(i-1,j,g))/assm_pitch&
-              +dtilde_x(i,j,g)*(xflux(i,j,g)+xflux(i-1,j,g))/assm_pitch
-          ELSE !boundary condition
+          IF(i .EQ. 1)THEN !left boundary leakage
             leakage=xflux(i,j,g)*dtilde_x(i,j,g)/assm_pitch
+            leak=leak-leakage
           ENDIF
-          leak=leak-leakage
 
-          IF(i .NE. core_x_size)THEN !right leakage
-            leakage=-(assm_pitch/(2.0D0*assm_xs(assm_map(i+1,j))%D(g)) &
-              +assm_pitch/(2.0D0*assm_xs(loc_id)%D(g)))**(-1) &
-              *(xflux(i+1,j,g)-xflux(i,j,g))/assm_pitch&
-              +dtilde_x(i+1,j,g)*(xflux(i+1,j,g)+xflux(i,j,g))/assm_pitch
-          ELSE !boundary condition
+          IF(i .EQ. core_x_size)THEN !right boundary leakage
             leakage=xflux(i,j,g)*dtilde_x(i+1,j,g)/assm_pitch
+            leak=leak+leakage
           ENDIF
-          leak=leak+leakage
 
-          IF(j .NE. 1)THEN !top leakage
-            leakage=-(assm_pitch/(2.0D0*assm_xs(loc_id)%D(g)) &
-              +assm_pitch/(2.0D0*assm_xs(assm_map(i,j-1))%D(g)))**(-1) &
-              *(xflux(i,j,g)-xflux(i,j-1,g))/assm_pitch&
-              +dtilde_y(i,j,g)*(xflux(i,j,g)+xflux(i,j-1,g))/assm_pitch
-          ELSE !boundary condition
+          IF(j .EQ. 1)THEN !top boundary leakage
             leakage=xflux(i,j,g)*dtilde_y(i,j,g)/assm_pitch
+            leak=leak-leakage
           ENDIF
-          leak=leak-leakage
 
-          IF(j .NE. core_y_size)THEN !bot leakage
-            leakage=-(assm_pitch/(2.0D0*assm_xs(assm_map(i,j+1))%D(g)) &
-              +assm_pitch/(2.0D0*assm_xs(loc_id)%D(g)))**(-1) &
-              *(xflux(i,j+1,g)-xflux(i,j,g))/assm_pitch&
-              +dtilde_y(i,j+1,g)*(xflux(i,j+1,g)+xflux(i,j,g))/assm_pitch
-          ELSE !boundary condition
+          IF(j .EQ. core_y_size)THEN !bot boundary leakage
             leakage=xflux(i,j,g)*dtilde_y(i,j+1,g)/assm_pitch
+            leak=leak+leakage
           ENDIF
-          leak=leak+leakage
 
           !scattering and fission
           DO gp=1,num_eg
@@ -707,7 +687,7 @@ CONTAINS
       ENDDO
     ENDDO
     !TODO: Figure out why boundary leak sum doesn't equal total leak sum
-    WRITE(*,'(A,1000ES12.4)')'eigenvalue',leak,fiss,scatt,col,(fiss)/(leak+col-scatt)
+    WRITE(*,'(A,ES22.16,1000ES12.4)')'alt eigenvalue: ',(fiss)/(leak+col-scatt),leak,fiss,scatt,col
     !xkeff=(fiss)/(leak+col-scatt)
     !xflux=xflux/SUM(xflux)
   ENDSUBROUTINE debug_eigen
