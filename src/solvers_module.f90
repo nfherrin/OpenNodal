@@ -575,6 +575,7 @@ CONTAINS
     REAL(kr8), INTENT(OUT) :: amatrix(:,:)
     INTEGER(ki4) :: cell_idx,neigh_idx,g,gp,i,j,loc_id
     REAL(kr8) :: balance(core_x_size,core_y_size,num_eg),leakage,leak,fiss,scatt,col
+    xflux=xflux/SUM(xflux)
 
     ! (1   , 2   , 3    , 4     , 5   )
     ! (diag, left, right, below, above)
@@ -686,9 +687,15 @@ CONTAINS
         ENDDO
       ENDDO
     ENDDO
-    !TODO: Figure out why boundary leak sum doesn't equal total leak sum
     WRITE(*,'(A,ES22.16,1000ES12.4)')'alt eigenvalue: ',(fiss)/(leak+col-scatt),leak,fiss,scatt,col
-    !xkeff=(fiss)/(leak+col-scatt)
-    !xflux=xflux/SUM(xflux)
+    xkeff=(fiss)/(leak+col-scatt)
+    WRITE(*,*)'fast flux'
+    DO j=1,core_y_size
+      WRITE(*,'(1000ES24.16)')xflux(:,j,1)
+    ENDDO
+    WRITE(*,*)'thermal flux'
+    DO j=1,core_y_size
+      WRITE(*,'(1000ES24.16)')xflux(:,j,2)
+    ENDDO
   ENDSUBROUTINE debug_eigen
 ENDMODULE solvers_module
