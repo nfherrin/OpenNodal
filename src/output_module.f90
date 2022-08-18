@@ -78,6 +78,7 @@ CONTAINS
         CALL fatal_error(t_char)
       ENDIF
 
+      !output the plot commands
       WRITE(out_unit_temp,'(A)')'# plot.plt'
       WRITE(out_unit_temp,'(A)')'set term png'
       WRITE(out_unit_temp,'(A,I0,A)')'set output "flux_g',g,'.png"'
@@ -85,6 +86,9 @@ CONTAINS
       WRITE(out_unit_temp,'(A)')'set grid'
       WRITE(out_unit_temp,'(A)')'set xlabel "x [cm]"'
       WRITE(out_unit_temp,'(A)')'set ylabel "y [cm]"'
+      WRITE(out_unit_temp,'(A)')'set size ratio 1'
+      WRITE(out_unit_temp,'(A,ES16.8,A)')'set xrange [0:',core_x_size*assm_pitch,']'
+      WRITE(out_unit_temp,'(A,ES16.8,A)')'set yrange [0:',core_y_size*assm_pitch,']'
       WRITE(out_unit_temp,'(A,I0,A)')'plot "'//TRIM(base_in)//'_flux_g',g,'.csv" with image'
 
       CALL EXECUTE_COMMAND_LINE('gnuplot -c temp.plotcommands.temp')

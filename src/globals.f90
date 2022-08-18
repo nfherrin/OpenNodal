@@ -100,7 +100,6 @@ CONTAINS
 
     check_for=.FALSE.
 
-
     CALL EXECUTE_COMMAND_LINE('which '//TRIM(software_name)//' > temp.softwarecheck.temp')
     OPEN(UNIT=check_out_unit, FILE='temp.softwarecheck.temp', STATUS='OLD', ACTION = "READ", IOSTAT=t_int, IOMSG=t_char)
     IF(t_int .NE. 0)THEN
