@@ -38,7 +38,8 @@ CONTAINS
 
     CALL create_flux_csv()
 
-    CALL plot_flux()
+    !only plot if gnuplot is found
+    IF(check_for('gnuplot'))CALL plot_flux()
   ENDSUBROUTINE output_results
 
   !creates the flux csv output
@@ -71,7 +72,7 @@ CONTAINS
     CHARACTER(100) :: t_char
     INTEGER(ki4) :: out_unit_temp=41
     DO g=1,num_eg
-      OPEN(UNIT=out_unit_temp, FILE='temp.temp.temp.squared.temp', STATUS='REPLACE', ACTION = "WRITE", &
+      OPEN(UNIT=out_unit_temp, FILE='temp.plotcommands.temp', STATUS='REPLACE', ACTION = "WRITE", &
           IOSTAT=t_int, IOMSG=t_char)
       IF(t_int .NE. 0)THEN
         CALL fatal_error(t_char)
@@ -86,11 +87,11 @@ CONTAINS
       WRITE(out_unit_temp,'(A)')'set ylabel "y [cm]"'
       WRITE(out_unit_temp,'(A,I0,A)')'plot "'//TRIM(base_in)//'_flux_g',g,'.csv" with image'
 
-      CALL EXECUTE_COMMAND_LINE('gnuplot -c temp.temp.temp.squared.temp')
+      CALL EXECUTE_COMMAND_LINE('gnuplot -c temp.plotcommands.temp')
 
       CLOSE(out_unit_temp)
     ENDDO
 
-    CALL EXECUTE_COMMAND_LINE('rm temp.temp.temp.squared.temp')
+    CALL EXECUTE_COMMAND_LINE('rm temp.plotcommands.temp')
   ENDSUBROUTINE plot_flux
 ENDMODULE output_module
