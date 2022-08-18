@@ -33,6 +33,8 @@ PROGRAM opennodal
 
     CALL solver()
 
+    CALL output_results()
+
     deallocate(xflux)
 
 ENDPROGRAM opennodal
