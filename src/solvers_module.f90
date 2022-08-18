@@ -81,6 +81,14 @@ CONTAINS
       CASE DEFAULT
         CALL fatal_error('Invalid symmetry option: '//TRIM(ADJUSTL(prob_sym)))
     ENDSELECT
+    SELECTCASE(bc_opt)
+      CASE('vac','vacuum') !nothing to do, already taken care of in previous block
+      CASE('reflect','reflective') !all dtildes should start as zero since that is for reflective at boundary
+        dtilde_x=0.0D0
+        dtilde_y=0.0D0
+      CASE('albedo') !will eventually be supported so give a debugging stop, not a fatal error
+        STOP 'albedo boundary conditions not yet supported!'
+    ENDSELECT
   ENDSUBROUTINE solver_init
 !
 !---------------------------------------------------------------------------------------------------
@@ -225,7 +233,10 @@ CONTAINS
 
       CALL print_log(TRIM(str(iter,4))//'   '//TRIM(str(xkeff,6,'F'))//'   '//TRIM(str(conv_xkeff,2)) &
         //'   '//TRIM(str(conv_xflux,2)))
-      !CALL comp_dtilde()
+      IF(nodal_method .EQ. 'poly')THEN
+        CALL comp_dtilde()
+        CALL build_amatrix(amat)
+      ENDIF
 
       IF ((conv_xflux < tol_xflux) .AND. (conv_xkeff < tol_xkeff)) EXIT
 

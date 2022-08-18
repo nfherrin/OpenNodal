@@ -140,7 +140,7 @@ CONTAINS
     !data for caseid block
     i=1
     blocks(i)%bname='[CASE_DETAILS]'
-    blocks(i)%num_cards=5
+    blocks(i)%num_cards=6
     ALLOCATE(blocks(i)%cards(blocks(i)%num_cards))
     j=1
     blocks(i)%cards(j)%cname='title'
@@ -157,11 +157,14 @@ CONTAINS
     j=5
     blocks(i)%cards(j)%cname='max_its'
     blocks(i)%cards(j)%getcard=>get_max_its
+    j=6
+    blocks(i)%cards(j)%cname='nodal_method'
+    blocks(i)%cards(j)%getcard=>get_nodal_method
 
     !data for CORE block
     i=2
     blocks(i)%bname='[CORE]'
-    blocks(i)%num_cards=5
+    blocks(i)%num_cards=6
     ALLOCATE(blocks(i)%cards(blocks(i)%num_cards))
     j=1
     blocks(i)%cards(j)%cname='dim'
@@ -178,6 +181,9 @@ CONTAINS
     j=5
     blocks(i)%cards(j)%cname='assm_map'
     blocks(i)%cards(j)%getcard=>get_assm_map
+    j=6
+    blocks(i)%cards(j)%cname='bc'
+    blocks(i)%cards(j)%getcard=>get_bc
 
     !data for MATERIAL block
     i=3
@@ -504,6 +510,7 @@ CONTAINS
       ENDIF
     ENDIF
   ENDSUBROUTINE get_assm_map
+
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the nsplit option
 !> @param this_card - The card we're retrieving data for
@@ -585,6 +592,30 @@ CONTAINS
   ENDSUBROUTINE get_max_its
 
 !---------------------------------------------------------------------------------------------------
+!> @brief Subroutine to read in which nodal method is being used, right now only fd and poly supported
+!> @param this_card - The card we're retrieving data for
+!> @param wwords - The string from which the data is being retrieved
+!>
+  SUBROUTINE get_nodal_method(this_card,wwords)
+    CLASS(cardType),INTENT(INOUT) :: this_card
+    CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+
+    INTEGER(ki4) :: nwords
+    CHARACTER(ll_max) :: t_char,words(lp_max)
+    INTEGER(ki4) :: i,ios,j,oct_sym
+
+    wwords(1)=TRIM(wwords(1))
+    CALL print_log(TRIM(this_card%cname)//' card found')
+
+    nodal_method=TRIM(ADJUSTL(wwords(2)))
+
+    IF(nodal_method .NE. 'poly' .AND. nodal_method .NE. 'fd')THEN
+      CALL fatal_error('Invalid nodal method: '//TRIM(nodal_method))
+    ENDIF
+
+  ENDSUBROUTINE get_nodal_method
+
+!---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the cross section filename
 !> @param this_card - The card we're retrieving data for
 !> @param wwords - The string from which the data is being retrieved
@@ -630,4 +661,26 @@ CONTAINS
       ENDIF
     ENDDO
   ENDSUBROUTINE get_xs_map
+
+!---------------------------------------------------------------------------------------------------
+!> @brief Subroutine to read in the boundary conditions option
+!> @param this_card - The card we're retrieving data for
+!> @param wwords - The string from which the data is being retrieved
+!>
+  SUBROUTINE get_bc(this_card,wwords)
+    CLASS(cardType),INTENT(INOUT) :: this_card
+    CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+
+    CALL print_log(TRIM(this_card%cname)//' card found')
+
+    bc_opt=TRIM(ADJUSTL(wwords(2)))
+
+    SELECTCASE(bc_opt)
+      CASE('vac','vacuum','reflect','reflective') !nothing to do, supported
+      CASE('albedo') !will eventually be supported so give a debugging stop, not a fatal error
+        STOP 'albedo boundary conditions not yet supported!'
+      CASE DEFAULT
+        CALL fatal_error('Invalid boundary condition given: '//TRIM(bc_opt))
+    ENDSELECT
+  ENDSUBROUTINE get_bc
 ENDMODULE input_module

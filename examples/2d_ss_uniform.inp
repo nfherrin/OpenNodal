@@ -5,6 +5,7 @@ OpenNodal_INP_V1
   k_eps 1.0D-10
   phi_eps 1.0D-10
   max_its 10000
+  nodal_method fd
 
 [CORE]
   dim 2D
@@ -12,6 +13,7 @@ OpenNodal_INP_V1
   size 5
   apitch 20.0
   sym full
+  bc vacuum
 
   assm_map
     2 2 2 2 2

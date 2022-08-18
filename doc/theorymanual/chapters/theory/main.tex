@@ -1,0 +1,36 @@
+While the listed references provide a complete description of the polynomial nodal equations and the nonlinear iteration procedure, some correlations are implied but not explicitly stated.
+One of these implied values is $\bar{S}$, so a more explicit description is given here.
+
+Fundamental equations given or implied in~\cite{GehinPhD}, \cite{SmithMS}, and~\cite{Smith1983Nonlinear}:
+\[
+l,m,n=\begin{cases}
+i=1,2,\dots,I & u=x,y,z \\
+j=1,2,\dots,J & v\neq u \\
+k=1,2,\dots,K & w\neq u,v
+\end{cases}
+\]
+\[
+J_{gu}^{mn}(u_l)=-\left[\frac{h_u^l}{2D_g^{lmn}}+\frac{h_u^{l-1}}{2D_g^{l-1,mn}}\right]^{-1}\left(\bar{\phi}_g^{lmn}-\bar{\phi}_g^{l-1,mn}\right)+\tilde{D}_{gu}^{l,l-1,mn}\left(\bar{\phi}_g^{lmn}+\bar{\phi}_g^{l-1,mn}\right)
+\]
+\[
+J_{gu}^{mn}(u)=\frac{1}{h_w^nh_v^m}\int_{v_m}^{v_{m+1}}\int_{w_n}^{w_{n+1}}J_{gu}(u,v,w)\,dv\,dw
+\]
+\[
+L_{gv}^{mn}(u)=\frac{1}{h_w^n}\int_{w_n}^{w_{n+1}}\left(J_{gv}(u,v_{m+1},w)-J_{gv}(u,v_{m},w)\right)\,dw
+\]
+\[
+S_{gu}^{mn}(u)=\frac{1}{h_v^m}L_{gv}^{mn}(u)+\frac{1}{h_w^n}L_{gw}^{mn}(u)
+\]
+\[
+\bar{S}_{gu}^{lmn}=\frac{1}{h_u^l}\int_{u_l}^{u_{l+1}}S_{gu}^{mn}(u)\,du
+\]
+
+To get a clear form for how to compute $\bar{S}$, we first get $\bar{L}$ in terms of $J$:
+\[
+  \bar{L}_{gv}^{lmn}=\frac{1}{h_w^nh_u^l}\int_{u_l}^{u_{l+1}}\int_{w_n}^{w_{n+1}}\left(J_{gv}(u,v_{m+1},w)-J_{gv}(u,v_{m},w)\right)\,dw\,du=J_{gv}^{ln}(v_{m+1})-J_{gv}^{ln}(v_{m})
+\]
+So then $\bar{S}$ can be expressed as:
+\[
+  \bar{S}_{gu}^{lmn}=\frac{1}{h_u^l}\int_{u_l}^{u_{l+1}}\left(\frac{1}{h_v^m}L_{gv}^{mn}(u)+\frac{1}{h_w^n}L_{gw}^{mn}(u)\right)\,du=\frac{1}{h_v^m}\bar{L}_{gv}^{lmn}+\frac{1}{h_w^n}\bar{L}_{gw}^{lmn}
+\]
+Which gives $\bar{S}$ in a form that can now be explicitly computed using flux, $\phi$, for a current, $J$, expressed as a function of $\phi$.

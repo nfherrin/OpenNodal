@@ -36,6 +36,8 @@ PROGRAM opennodal
 
     if (anal_ref /= 'NONE') call anal (xkeff, xflux, anal_ref)
 
+    CALL output_results()
+
     deallocate(xflux)
 
 ENDPROGRAM opennodal
