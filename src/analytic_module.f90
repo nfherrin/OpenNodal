@@ -15,7 +15,7 @@ real(kr8), parameter :: pi = 4d0*atan(1d0)
 CONTAINS
 
   subroutine anal (xkeff, xflux, anal_ref)
-    use globals , only : core_x_size, core_y_size, num_eg, print_log
+    use globals , only : print_log
     use errors_module, only : fatal_error
     IMPLICIT NONE
     real(kr8), intent(in) :: xkeff
@@ -23,32 +23,21 @@ CONTAINS
     character(*), intent(in) :: anal_ref
 
 
-    real(kr8), allocatable :: cpy_flux(:,:,:)
-
-    ! necessary so that other routines can renormalize to the referenced
-    ! analytic solution
-    allocate(cpy_flux(core_x_size, core_y_size, num_eg))
-    cpy_flux = xflux
-
     call print_log('')
     call print_log('=== ANALYSIS ===')
-
 
     ! we can analyze keff, flux, and flux ratio
     ! but not all reference solutions may have all options available
     ! so we do some switching here
     select case (anal_ref)
       case ('2d2g')
+        call anal_frat (xflux, anal_ref)
         call anal_keff (xkeff, anal_ref)
         call anal_flux (xflux, anal_ref)
-        call anal_frat (xflux, anal_ref)
       case default
         call fatal_error (&
-          'analytic ratio calculation not implemented for reference problem: ' &
-          // anal_ref)
+          'analysis not implemented for reference problem: ' // anal_ref)
     endselect
-
-    deallocate(cpy_flux)
 
     return
   endsubroutine anal
@@ -106,7 +95,7 @@ CONTAINS
 
     call print_log('XKEFF_anal = ' // str(anal, 10, 'f'))
     call print_log('XKEFF_calc = ' // str(calc, 10, 'f'))
-    call print_log('XKEFF_err  = ' // str(err , 6, 'f'))
+    call print_log('XKEFF_err  = ' // TRIM(ADJUSTL(str(err , 6, 'f'))) // ' [pcm]')
 
     return
   endsubroutine anal_keff
@@ -168,10 +157,71 @@ CONTAINS
     return
   endsubroutine anal_frat
 
+  REAL(kr8) FUNCTION calc_flux(x, y, z, anal_ref)
+    use globals, only : assm_pitch, core_x_size, core_y_size
+    use errors_module, only : fatal_error
+    REAL(kr8), INTENT(in) :: x, y, z
+    CHARACTER(*), INTENT(in) :: anal_ref
+
+    REAL(kr8) :: Lx, Ly
+
+    select case (anal_ref)
+      case ('2d2g')
+        Lx = assm_pitch*core_x_size
+        Ly = assm_pitch*core_y_size
+        ! note: only fast group (i.e. g=1 with normalization constant k1=1)
+        calc_flux = 1d0*SIN(pi/Lx*x)*SIN(pi/Ly*y)
+        RETURN
+      case default
+        call fatal_error (&
+          'analytic flux calculation not implemented for reference problem: ' &
+          // anal_ref)
+    endselect
+
+  ENDFUNCTION calc_flux
+
   subroutine anal_flux (xflux, anal_ref)
+    use globals , only : core_x_size, core_y_size, num_eg, print_log, assm_pitch
+    use string_module, only : str
     IMPLICIT NONE
     real(kr8), intent(in) :: xflux(:,:,:)
     character(*), intent(in) :: anal_ref
+
+    INTEGER   :: i, j
+    REAL(kr8) :: dx, dy, x, y
+    REAL(kr8) :: diff, diff_two, diff_inf, diff_rms
+    REAL(kr8), ALLOCATABLE :: cpy_flux(:,:,:)
+
+    ! necessary so that other routines can renormalize to the referenced
+    ! analytic solution
+    allocate(cpy_flux(core_x_size, core_y_size, num_eg))
+    cpy_flux = xflux
+    cpy_flux = cpy_flux / MAXVAL(cpy_flux)
+
+    diff_two = 0d0
+    diff_inf = 0d0
+
+    dx = assm_pitch
+    dy = assm_pitch
+
+    DO j = 1,core_y_size
+      y = dy*(j-0.5d0)
+      DO i = 1,core_x_size
+        x = dx*(i-0.5d0)
+        diff = calc_flux(x, y, 0d0, anal_ref) - cpy_flux(i,j,1)
+        diff_two = diff_two + diff**2
+        diff_inf = MAX(diff_inf, ABS(diff))
+      ENDDO
+    ENDDO
+
+    diff_rms = diff_two / SQRT(DBLE(core_x_size*core_y_size))
+
+    CALL print_log('XFLUX_rms = ' // str(diff_rms))
+    CALL print_log('XFLUX_two = ' // str(diff_two))
+    CALL print_log('XFLUX_inf = ' // str(diff_inf))
+
+    DEALLOCATE(cpy_flux)
+
     return
   endsubroutine anal_flux
 

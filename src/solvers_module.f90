@@ -10,7 +10,7 @@ MODULE solvers_module
   PRIVATE
   PUBLIC :: solver,solver_init
 
-  CHARACTER(*), PARAMETER :: inner_solve_method = 'dgesv'
+  CHARACTER(*), PARAMETER :: inner_solve_method = 'sor'
 
 CONTAINS
 
