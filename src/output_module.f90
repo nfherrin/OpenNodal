@@ -23,6 +23,7 @@ CONTAINS
     ENDIF
 
     WRITE(out_unit,'(A,F24.16)')'Final Eigenvalue = ',xkeff
+    IF(num_eg .EQ. 2)WRITE(out_unit,'(A,F21.16)')'Final 2G Flux Ratio = ',SUM(xflux(:,:,2))/SUM(xflux(:,:,1))
 
     DO g=1,num_eg
       WRITE(out_unit,'(A,I0)')'Nodal Flux G = ',g
