@@ -26,6 +26,7 @@ CONTAINS
 !>
   SUBROUTINE solver_init()
     INTEGER :: i,ii,j,jj,g,ip,jp,temp_map(core_x_size,core_y_size)
+    REAL(kr8) :: gamma
 
     IF(nsplit .GT. 1)THEN
       !in this case we are splitting the system and need to remake the assemply map
@@ -59,25 +60,45 @@ CONTAINS
     ALLOCATE(dtilde_y(core_x_size,core_y_size+1,num_eg))
     dtilde_x=0.0
     dtilde_y=0.0
-    !set initial CMFD boundary conditions for dtilde
-    SELECT CASE(prob_sym)
-      CASE('full') !vacuum on all sides
-        dtilde_x(1,:,:)=0.5d0
-        dtilde_x(core_x_size+1,:,:)=0.5d0
-      CASE('qtr','half') !vacuum on right and bot sides or on right bot and top sides
-        dtilde_x(core_x_size+1,:,:)=0.5d0
-      CASE DEFAULT
-        CALL fatal_error('Invalid symmetry option: '//TRIM(ADJUSTL(prob_sym)))
+
+    !set the gamma value
+    SELECTCASE(bc_opt)
+      CASE('vac','vacuum') !vacuum gamma is 2
+        gamma=2.0D0
+      CASE('zero') !nothing to do, already taken care of in previous block
+        gamma=0.0D0
+      CASE('reflect','reflective') !nothing to do for now, we'll set all dtildes to zero later...
+      CASE('albedo') !will eventually be supported so give a debugging stop, not a fatal error
+        STOP 'albedo boundary conditions not yet supported!'
     ENDSELECT
-    SELECT CASE(prob_sym)
-      CASE('full','half') !vacuum on all sides or right and top/bot sides
-        dtilde_y(:,1,:)=0.5d0
-        dtilde_y(:,core_y_size+1,:)=0.5d0
-      CASE('qtr')!vacuum on right and bot sides
-        dtilde_y(:,core_y_size+1,:)=0.5d0
-      CASE DEFAULT
-        CALL fatal_error('Invalid symmetry option: '//TRIM(ADJUSTL(prob_sym)))
-    ENDSELECT
+
+    !set CMFD boundary conditions for dtilde based on symmetry
+    DO g=1,num_eg
+      DO j=1,core_y_size
+        SELECT CASE(prob_sym)
+          CASE('full') !vacuum on all sides
+                dtilde_x(1,j,g)=(0.5D0*assm_pitch/assm_xs(assm_map(1,j))%D(g)+gamma)**(-1)
+                dtilde_x(core_x_size+1,j,g)=(0.5D0*assm_pitch/assm_xs(assm_map(core_x_size,j))%D(g)+gamma)**(-1)
+          CASE('qtr','half') !vacuum on right and bot sides or on right bot and top sides
+            dtilde_x(core_x_size+1,j,g)=(0.5D0*assm_pitch/assm_xs(assm_map(core_x_size,j))%D(g)+gamma)**(-1)
+          CASE DEFAULT
+            CALL fatal_error('Invalid symmetry option: '//TRIM(ADJUSTL(prob_sym)))
+        ENDSELECT
+      ENDDO
+      DO i=1,core_x_size
+        SELECT CASE(prob_sym)
+          CASE('full','half') !vacuum on all sides or right and top/bot sides
+            dtilde_y(i,1,g)=(0.5D0*assm_pitch/assm_xs(assm_map(i,1))%D(g)+gamma)**(-1)
+            dtilde_y(i,core_y_size+1,g)=(0.5D0*assm_pitch/assm_xs(assm_map(i,core_y_size))%D(g)+gamma)**(-1)
+          CASE('qtr')!vacuum on right and bot sides
+            dtilde_y(i,core_y_size+1,g)=(0.5D0*assm_pitch/assm_xs(assm_map(i,core_y_size))%D(g)+gamma)**(-1)
+          CASE DEFAULT
+            CALL fatal_error('Invalid symmetry option: '//TRIM(ADJUSTL(prob_sym)))
+        ENDSELECT
+      ENDDO
+    ENDDO
+
+    !if we have reflective just set back to 0
     SELECTCASE(bc_opt)
       CASE('vac','vacuum') !nothing to do, already taken care of in previous block
       CASE('reflect','reflective') !all dtildes should start as zero since that is for reflective at boundary
