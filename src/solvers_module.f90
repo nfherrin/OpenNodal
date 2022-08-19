@@ -227,7 +227,7 @@ CONTAINS
       keff_old=xkeff
       flux_old=xflux
       fiss_src_sum(1) = fiss_src_sum(2)
-      CALL debug_eigen(amat)
+      !CALL debug_eigen(amat)
       CALL print_log(TRIM(str(iter,4))//'   '//TRIM(str(xkeff,6,'F'))//'   '//TRIM(str(conv_xkeff,2)) &
         //'   '//TRIM(str(conv_xflux,2)))
       IF(nodal_method .EQ. 'poly')THEN
@@ -260,6 +260,8 @@ CONTAINS
     ! (diag, left, right, down , up   )
     ! (diag, west, east , south, north)
 
+    !TODO change BCs to match wills
+    !TODO first check the reflective solution on mine vs wills for a nonhomogeneous
     amatrix=0.0D0
     DO g=1,num_eg
       DO j=1,core_y_size
@@ -315,6 +317,20 @@ CONTAINS
       ENDDO
     ENDDO
     amatrix=amatrix/assm_pitch
+
+    !WRITE(*,*)'A matrix start***************************************************************'
+    !WRITE(*,'(A)')'  diag        left        right       below       above       ratio'
+    !DO g=1,num_eg
+    ! DO i=1,core_x_size
+    !   DO j=1,core_y_size
+    !     cell_idx=calc_idx(i,j,g)
+    !     WRITE(*,'(1000ES12.4)')amatrix(1,cell_idx),amatrix(2,cell_idx),amatrix(3,cell_idx), &
+    !       amatrix(4,cell_idx),amatrix(5,cell_idx),amatrix(1,cell_idx)/SUM(amatrix(2:5,cell_idx))
+    !   ENDDO
+    ! ENDDO
+    !ENDDO
+    !WRITE(*,*)'A matrix end*****************************************************************'
+    !STOP 'matrix test'
   ENDSUBROUTINE build_amatrix
 
   SUBROUTINE stripe_to_dense(stripe, dense)
@@ -363,8 +379,6 @@ CONTAINS
         ENDDO ! i = 1,core_x_size
       ENDDO ! j = 1,core_y_size
     ENDDO ! g = 1,num_eq
-
-    RETURN
   ENDSUBROUTINE stripe_to_dense
 
   ! solve inner linear system of equations (allows switching solver)
@@ -687,15 +701,15 @@ CONTAINS
         ENDDO
       ENDDO
     ENDDO
-    WRITE(*,'(A,ES22.16,1000ES12.4)')'alt eigenvalue: ',(fiss)/(leak+col-scatt),leak,fiss,scatt,col
+    WRITE(*,'(A,F22.16,1000ES12.4)')'alt eigenvalue: ',(fiss)/(leak+col-scatt),leak,fiss,scatt,col
     xkeff=(fiss)/(leak+col-scatt)
     WRITE(*,*)'fast flux'
     DO j=1,core_y_size
-      WRITE(*,'(1000ES24.16)')xflux(:,j,1)
+      WRITE(*,'(1000ES12.4)')xflux(:,j,1)
     ENDDO
     WRITE(*,*)'thermal flux'
     DO j=1,core_y_size
-      WRITE(*,'(1000ES24.16)')xflux(:,j,2)
+      WRITE(*,'(1000ES12.4)')xflux(:,j,2)
     ENDDO
   ENDSUBROUTINE debug_eigen
 ENDMODULE solvers_module
