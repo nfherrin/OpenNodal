@@ -676,7 +676,7 @@ CONTAINS
     bc_opt=TRIM(ADJUSTL(wwords(2)))
 
     SELECTCASE(bc_opt)
-      CASE('vac','vacuum','reflect','reflective') !nothing to do, supported
+      CASE('vac','vacuum','reflect','reflective','zero') !nothing to do, supported
       CASE('albedo') !will eventually be supported so give a debugging stop, not a fatal error
         STOP 'albedo boundary conditions not yet supported!'
       CASE DEFAULT
