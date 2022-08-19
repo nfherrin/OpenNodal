@@ -67,6 +67,9 @@ MODULE globals
   !> boundary condition option
   CHARACTER(100) :: bc_opt='vacuum'
 
+  !> node widths
+  REAL(kr8), ALLOCATABLE :: h_x(:),h_y(:)
+
 CONTAINS
 
 !---------------------------------------------------------------------------------------------------

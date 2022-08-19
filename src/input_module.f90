@@ -459,15 +459,15 @@ CONTAINS
     CHARACTER(ll_max) :: t_char,words(lp_max)
     INTEGER(ki4) :: i,ios,j,oct_sym
 
-    !TODO: fix breaking of non-square problems
+    LOGICAL :: odd_prob
 
     wwords(1)=TRIM(wwords(1))
     CALL print_log(TRIM(this_card%cname)//' card found')
 
+    IF(MOD(core_size,2) .EQ. 1)odd_prob=.TRUE.
     !allocate the assembly map based upon problem size and symmetry
     !this is the actual problem we will solve, and remember again that the core is assumed square
     ! TODO need to implement ragged core
-    !TODO need to make sure I can do this after getting the symmetry and size
     SELECTCASE(prob_sym)
       CASE('full')
         core_x_size=core_size
@@ -482,6 +482,16 @@ CONTAINS
         CALL fatal_error(TRIM(prob_sym)//' is not a valid symmetry')
     ENDSELECT
     ALLOCATE(assm_map(core_x_size,core_y_size))
+    ALLOCATE(h_x(core_x_size),h_y(core_y_size))
+    h_x=assm_pitch
+    h_y=assm_pitch
+    SELECTCASE(prob_sym)
+      CASE('half')
+        h_x(1)=assm_pitch*0.5D0
+      CASE('qtr')
+        h_x(1)=assm_pitch*0.5D0
+        h_y(1)=assm_pitch*0.5D0
+    ENDSELECT
     assm_map=0
 
     !read in the core map
