@@ -1,4 +1,3 @@
-! TODO finish implementation
 !OpenNodal is licensed under the MIT License.
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++!
 !> @brief Nodal solvers module.

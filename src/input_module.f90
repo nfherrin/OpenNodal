@@ -459,6 +459,8 @@ CONTAINS
     CHARACTER(ll_max) :: t_char,words(lp_max)
     INTEGER(ki4) :: i,ios,j,oct_sym
 
+    !TODO: fix breaking of non-square problems
+
     wwords(1)=TRIM(wwords(1))
     CALL print_log(TRIM(this_card%cname)//' card found')
 
@@ -670,6 +672,8 @@ CONTAINS
   SUBROUTINE get_bc(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
     CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+
+    !TODO: fix issue where odd sized systems using symmetry are extended by 1 (need half sized nodes...)
 
     CALL print_log(TRIM(this_card%cname)//' card found')
 
