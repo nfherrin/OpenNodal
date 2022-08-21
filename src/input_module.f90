@@ -164,7 +164,7 @@ CONTAINS
     !data for CORE block
     i=2
     blocks(i)%bname='[CORE]'
-    blocks(i)%num_cards=6
+    blocks(i)%num_cards=7
     ALLOCATE(blocks(i)%cards(blocks(i)%num_cards))
     j=1
     blocks(i)%cards(j)%cname='dim'
@@ -184,6 +184,9 @@ CONTAINS
     j=6
     blocks(i)%cards(j)%cname='bc'
     blocks(i)%cards(j)%getcard=>get_bc
+    j=7
+    blocks(i)%cards(j)%cname='refl_mat'
+    blocks(i)%cards(j)%getcard=>get_refl_mat
 
     !data for MATERIAL block
     i=3
@@ -683,8 +686,6 @@ CONTAINS
     CLASS(cardType),INTENT(INOUT) :: this_card
     CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
 
-    !TODO: fix issue where odd sized systems using symmetry are extended by 1 (need half sized nodes...)
-
     CALL print_log(TRIM(this_card%cname)//' card found')
 
     bc_opt=TRIM(ADJUSTL(wwords(2)))
@@ -697,4 +698,17 @@ CONTAINS
         CALL fatal_error('Invalid boundary condition given: '//TRIM(bc_opt))
     ENDSELECT
   ENDSUBROUTINE get_bc
+
+
+!---------------------------------------------------------------------------------------------------
+!> @brief Subroutine to read in reflector material to fill in gaps, and/or to compute a reflector
+!>    albedo boundary condition
+  SUBROUTINE get_refl_mat(this_card,wwords)
+    CLASS(cardType),INTENT(INOUT) :: this_card
+    CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+
+    CALL print_log(TRIM(this_card%cname)//' card found')
+
+    READ(wwords(2),*)refl_mat
+  ENDSUBROUTINE get_refl_mat
 ENDMODULE input_module

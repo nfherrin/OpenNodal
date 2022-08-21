@@ -28,6 +28,15 @@ CONTAINS
     INTEGER :: temp_hx(core_x_size),temp_hy(core_y_size)
     REAL(kr8) :: gamma
 
+    !set gaps in ragged core equal to the reflector material
+    IF(MINVAL(assm_map) .LE. 0 .AND. refl_mat .EQ. 0)&
+      CALL fatal_error('Ragged core specified, but no reflector material given')
+    DO j=1,core_y_size
+      DO i=1,core_x_size
+        IF(assm_map(i,j) .LE. 0)assm_map(i,j)=refl_mat
+      ENDDO
+    ENDDO
+
     IF(nsplit .GT. 1)THEN
       !in this case we are splitting the system and need to remake the assembly map
       !and recompute the core_x_size and core_y_size
