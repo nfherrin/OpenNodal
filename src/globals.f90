@@ -47,7 +47,7 @@ MODULE globals
   INTEGER(ki4), PARAMETER :: log_unit=9999
 
   !>  eigenvalue
-  REAL(kr8) :: xkeff=1d0 ! TODO implement an initial user guess
+  REAL(kr8) :: xkeff=1d0 ! TODO implement an initial user guess input AND output
   !>  scalar flux
   REAL(kr8), ALLOCATABLE :: xflux(:,:,:) ! (nx,ny)
 
@@ -69,6 +69,9 @@ MODULE globals
 
   !> node widths
   REAL(kr8), ALLOCATABLE :: h_x(:),h_y(:)
+
+  !> reflector material
+  INTEGER(ki4) :: refl_mat=0
 
 CONTAINS
 
