@@ -1,0 +1,35 @@
+\section{Main Input File}
+
+OpenNodal's input is separated into blocks describing aspects of the problem.
+Each block may be given a number of cards describing specific details about the problem parameters.
+OpenNodal currently features the following three blocks:
+\begin{table}[H]
+\centering
+  \begin{tabular}{|l|l|}
+    \hline
+    \multicolumn{1}{|c|}{{\ul \textbf{Block Name}}} & \multicolumn{1}{c|}{{\ul \textbf{Available Cards}}} \\ \hline
+    \verb"[CASE_DETAILS]" & \verb"title", \verb"nsplit", \verb"k_eps", \verb"phi_eps", \verb"max_its", and \verb"nodal_method" \\ \hline
+    \verb"[CORE]" & \verb"dim", \verb"size", \verb"apitch", \verb"sym", \verb"assm_map", \verb"bc", and \verb"refl_mat" \\ \hline
+    \verb"[MATERIAL]" & \verb"xs_file" and \verb"xs_map" \\ \hline
+  \end{tabular}
+\end{table}
+
+\subsection{[CASE\_DETAILS Block}
+
+The \verb"[CASE_DETAILS]" block describes details for the problem case, including run specifications such as convergence criteria and solution method.
+The following table describes the available input cards:
+\begin{table}[H]
+\centering
+  \begin{tabular}{|l|l|l|l|}
+    \hline
+    \multicolumn{1}{|c|}{{\ul \textbf{Card Name}}} & \multicolumn{1}{c|}{{\ul \textbf{Description}}} & \multicolumn{1}{c|}{{\ul \textbf{Options}}} & \multicolumn{1}{c|}{{\ul \textbf{Required?}}} \\ \hline
+    \verb"title"  & Problem Title & & \\ \hline
+    \verb"nsplit" & Spatial Refinement for nodes $nsplit\times nsplit$ & Any string of size 100 or less & \\ \hline
+    \verb"k_eps" & Eigenvalue convergence criteria & Any positive real number & \\ \hline
+    \verb"phi_eps" & Flux convergence criteria & Any positive real number & \\ \hline
+    \verb"max_its" & Maximum number of outer iterations & & \\ \hline
+    \verb"nodal_method" & Nodal method to be employed & & \\ \hline
+  \end{tabular}
+\end{table}
+
+\section{Cross Section Input File}
