@@ -73,6 +73,9 @@ MODULE globals
   !> reflector material
   INTEGER(ki4) :: refl_mat=0
 
+  !> albedo boundary conditions
+  REAL(kr8),ALLOCATABLE :: albedos(:)
+
 CONTAINS
 
 !---------------------------------------------------------------------------------------------------

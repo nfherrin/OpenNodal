@@ -685,15 +685,24 @@ CONTAINS
   SUBROUTINE get_bc(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
     CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+    INTEGER :: i
 
     CALL print_log(TRIM(this_card%cname)//' card found')
 
     bc_opt=TRIM(ADJUSTL(wwords(2)))
 
     SELECTCASE(bc_opt)
-      CASE('vac','vacuum','reflect','reflective','zero') !nothing to do, supported
+      CASE('vac','vacuum','reflective','zero','reflector') !nothing to do, supported
       CASE('albedo') !will eventually be supported so give a debugging stop, not a fatal error
-        STOP 'albedo boundary conditions not yet supported!'
+        DO i=3,1000000
+          IF(wwords(i) .EQ. '')EXIT
+        ENDDO
+        num_eg=i-3
+        ALLOCATE(albedos(num_eg))
+        DO i=3,1000000
+          IF(wwords(i) .EQ. '')EXIT
+          READ(wwords(i),*)albedos(i-2)
+        ENDDO
       CASE DEFAULT
         CALL fatal_error('Invalid boundary condition given: '//TRIM(bc_opt))
     ENDSELECT
