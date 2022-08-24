@@ -526,6 +526,77 @@ CONTAINS
     ENDIF
   ENDSUBROUTINE get_assm_map
 
+  !---------------------------------------------------------------------------------------------------
+  !> @brief Subroutine to read in the boundary conditions option
+  !> @param this_card - The card we're retrieving data for
+  !> @param wwords - The string from which the data is being retrieved
+  !>
+    SUBROUTINE get_bc(this_card,wwords)
+      CLASS(cardType),INTENT(INOUT) :: this_card
+      CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+      INTEGER :: i
+      REAL(kr8),ALLOCATABLE :: hxt(:),hyt(:)
+      INTEGER(ki4),ALLOCATABLE :: amt(:,:)
+
+      CALL print_log(TRIM(this_card%cname)//' card found')
+
+      bc_opt=TRIM(ADJUSTL(wwords(2)))
+
+      SELECTCASE(bc_opt)
+        CASE('vac','vacuum','reflective','zero') !nothing to do, supported
+        CASE('reflector')
+          !add the reflector on the boundary
+          ALLOCATE(amt(core_x_size,core_y_size))
+          ALLOCATE(hxt(core_x_size),hyt(core_y_size))
+          amt=assm_map
+          hxt=h_x
+          hyt=h_y
+          DEALLOCATE(assm_map,h_x,h_y)
+          SELECT CASE(prob_sym)
+            CASE('full')
+              core_x_size=core_x_size+2
+              core_y_size=core_y_size+2
+            CASE('half')
+              core_x_size=core_x_size+1
+              core_y_size=core_y_size+2
+            CASE('qtr')
+              core_x_size=core_x_size+1
+              core_y_size=core_y_size+1
+          ENDSELECT
+          ALLOCATE(assm_map(core_x_size,core_y_size))
+          ALLOCATE(h_x(core_x_size),h_y(core_y_size))
+          assm_map=0
+          h_x=assm_pitch
+          h_y=assm_pitch
+          SELECT CASE(prob_sym)
+            CASE('full')
+              assm_map(2:core_x_size-1,2:core_y_size-1)=amt
+              h_x(2:core_x_size-1)=hxt
+              h_y(2:core_y_size-1)=hyt
+            CASE('half')
+              assm_map(1:core_x_size-1,2:core_y_size-1)=amt
+              h_x(1:core_x_size-1)=hxt
+              h_y(2:core_y_size-1)=hyt
+            CASE('qtr')
+              assm_map(1:core_x_size-1,1:core_y_size-1)=amt
+              h_x(1:core_x_size-1)=hxt
+              h_y(1:core_y_size-1)=hyt
+          ENDSELECT
+        CASE('albedo') !will eventually be supported so give a debugging stop, not a fatal error
+          DO i=3,1000000
+            IF(wwords(i) .EQ. '')EXIT
+          ENDDO
+          num_eg=i-3
+          ALLOCATE(albedos(num_eg))
+          DO i=3,1000000
+            IF(wwords(i) .EQ. '')EXIT
+            READ(wwords(i),*)albedos(i-2)
+          ENDDO
+        CASE DEFAULT
+          CALL fatal_error('Invalid boundary condition given: '//TRIM(bc_opt))
+      ENDSELECT
+    ENDSUBROUTINE get_bc
+
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the nsplit option
 !> @param this_card - The card we're retrieving data for
@@ -676,37 +747,6 @@ CONTAINS
       ENDIF
     ENDDO
   ENDSUBROUTINE get_xs_map
-
-!---------------------------------------------------------------------------------------------------
-!> @brief Subroutine to read in the boundary conditions option
-!> @param this_card - The card we're retrieving data for
-!> @param wwords - The string from which the data is being retrieved
-!>
-  SUBROUTINE get_bc(this_card,wwords)
-    CLASS(cardType),INTENT(INOUT) :: this_card
-    CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
-    INTEGER :: i
-
-    CALL print_log(TRIM(this_card%cname)//' card found')
-
-    bc_opt=TRIM(ADJUSTL(wwords(2)))
-
-    SELECTCASE(bc_opt)
-      CASE('vac','vacuum','reflective','zero','reflector') !nothing to do, supported
-      CASE('albedo') !will eventually be supported so give a debugging stop, not a fatal error
-        DO i=3,1000000
-          IF(wwords(i) .EQ. '')EXIT
-        ENDDO
-        num_eg=i-3
-        ALLOCATE(albedos(num_eg))
-        DO i=3,1000000
-          IF(wwords(i) .EQ. '')EXIT
-          READ(wwords(i),*)albedos(i-2)
-        ENDDO
-      CASE DEFAULT
-        CALL fatal_error('Invalid boundary condition given: '//TRIM(bc_opt))
-    ENDSELECT
-  ENDSUBROUTINE get_bc
 
 
 !---------------------------------------------------------------------------------------------------
