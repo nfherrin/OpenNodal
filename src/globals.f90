@@ -76,6 +76,12 @@ MODULE globals
   !> albedo boundary conditions
   REAL(kr8),ALLOCATABLE :: albedos(:)
 
+  !> axial buckling for 2D problems
+  REAL(kr8) :: ax_buckle=0.0D0
+
+  !> it's pi
+  REAL(kr8),PARAMETER :: pi=4*ATAN(1.d0)
+
 CONTAINS
 
 !---------------------------------------------------------------------------------------------------
