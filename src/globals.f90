@@ -47,7 +47,7 @@ MODULE globals
   INTEGER(ki4), PARAMETER :: log_unit=9999
 
   !>  eigenvalue
-  REAL(kr8) :: xkeff=1d0 ! TODO implement an initial user guess
+  REAL(kr8) :: xkeff=1d0 ! TODO implement an initial user guess input AND output
   !>  scalar flux
   REAL(kr8), ALLOCATABLE :: xflux(:,:,:) ! (nx,ny)
 
@@ -70,6 +70,21 @@ MODULE globals
 
   !> boundary condition option
   CHARACTER(100) :: bc_opt='vacuum'
+
+  !> node widths
+  REAL(kr8), ALLOCATABLE :: h_x(:),h_y(:)
+
+  !> reflector material
+  INTEGER(ki4) :: refl_mat=0
+
+  !> albedo boundary conditions
+  REAL(kr8),ALLOCATABLE :: albedos(:)
+
+  !> axial buckling for 2D problems
+  REAL(kr8) :: ax_buckle=0.0D0
+
+  !> it's pi
+  REAL(kr8),PARAMETER :: pi=4*ATAN(1.d0)
 
 CONTAINS
 

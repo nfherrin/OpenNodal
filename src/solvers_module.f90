@@ -1,4 +1,3 @@
-! TODO finish implementation
 !OpenNodal is licensed under the MIT License.
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++!
 !> @brief Nodal solvers module.
@@ -25,25 +24,40 @@ CONTAINS
 !> @brief This subroutine solves the nodal problem
 !>
   SUBROUTINE solver_init()
-    INTEGER :: i,ii,j,jj,g,ip,jp
-    INTEGER, ALLOCATABLE :: temp_map(:,:)
+    INTEGER :: i,ii,j,jj,g,ip,jp,temp_map(core_x_size,core_y_size)
+    INTEGER :: temp_hx(core_x_size),temp_hy(core_y_size)
+    REAL(kr8) :: gamma(num_eg)
+
+    !set gaps in ragged core equal to the reflector material
+    IF(MINVAL(assm_map) .LE. 0 .AND. refl_mat .EQ. 0)&
+      CALL fatal_error('Ragged core specified, but no reflector material given')
+    DO j=1,core_y_size
+      DO i=1,core_x_size
+        IF(assm_map(i,j) .LE. 0)assm_map(i,j)=refl_mat
+      ENDDO
+    ENDDO
 
     IF(nsplit .GT. 1)THEN
-      !in this case we are splitting the system and need to remake the assemply map
+      !in this case we are splitting the system and need to remake the assembly map
       !and recompute the core_x_size and core_y_size
       ALLOCATE(temp_map(core_x_size,core_y_size))
       temp_map=assm_map
-      DEALLOCATE(assm_map)
+      temp_hx=h_x
+      temp_hy=h_y
+      DEALLOCATE(assm_map,h_x,h_y)
       ALLOCATE(assm_map(nsplit*core_x_size,nsplit*core_y_size))
+      ALLOCATE(h_x(nsplit*core_x_size),h_y(nsplit*core_y_size))
       assm_map=0
       jp=0
       DO j=1,core_y_size
         DO jj=1,nsplit
           jp=jp+1
+          h_y(jp)=temp_hy(j)/(nsplit*1.0D0)
           ip=0
           DO i=1,core_x_size
             DO ii=1,nsplit
               ip=ip+1
+              h_x(ip)=temp_hx(i)/(nsplit*1.0D0)
               assm_map(ip,jp)=temp_map(i,j)
             ENDDO
           ENDDO
@@ -60,34 +74,59 @@ CONTAINS
     !allocate dtildes
     ALLOCATE(dtilde_x(core_x_size+1,core_y_size,num_eg))
     ALLOCATE(dtilde_y(core_x_size,core_y_size+1,num_eg))
-    dtilde_x=0.0
-    dtilde_y=0.0
-    !set initial CMFD boundary conditions for dtilde
-    SELECT CASE(prob_sym)
-      CASE('full') !vacuum on all sides
-        dtilde_x(1,:,:)=0.5d0
-        dtilde_x(core_x_size+1,:,:)=0.5d0
-      CASE('qtr','half') !vacuum on right and bot sides or on right bot and top sides
-        dtilde_x(core_x_size+1,:,:)=0.5d0
-      CASE DEFAULT
-        CALL fatal_error('Invalid symmetry option: '//TRIM(ADJUSTL(prob_sym)))
-    ENDSELECT
-    SELECT CASE(prob_sym)
-      CASE('full','half') !vacuum on all sides or right and top/bot sides
-        dtilde_y(:,1,:)=0.5d0
-        dtilde_y(:,core_y_size+1,:)=0.5d0
-      CASE('qtr')!vacuum on right and bot sides
-        dtilde_y(:,core_y_size+1,:)=0.5d0
-      CASE DEFAULT
-        CALL fatal_error('Invalid symmetry option: '//TRIM(ADJUSTL(prob_sym)))
-    ENDSELECT
+    dtilde_x=0.0D0
+    dtilde_y=0.0D0
+
+    !set the gamma value
     SELECTCASE(bc_opt)
-      CASE('vac','vacuum') !nothing to do, already taken care of in previous block
-      CASE('reflect','reflective') !all dtildes should start as zero since that is for reflective at boundary
+      CASE('vac','vacuum') !vacuum gamma is 2
+        gamma=2.0D0
+      CASE('zero') !zero bc gama is 0
+        gamma=0.0D0
+      CASE('reflective') !nothing to do for now, we'll set all dtildes to zero later...
+      CASE('reflector')
+        !finite difference reflector, does not account for out-scattering
+        DO g=1,num_eg
+          gamma(g)=SQRT(assm_xs(refl_mat)%D(g)/assm_xs(refl_mat)%sigma_t(g))/assm_xs(refl_mat)%D(g)
+        ENDDO
+      CASE('albedo') !will eventually be supported so give a debugging stop, not a fatal error
+        DO g=1,num_eg
+          gamma(g)=2.0D0+4.0D0/(albedos(g)**(-1)-1)
+        ENDDO
+    ENDSELECT
+
+    !set CMFD boundary conditions for dtilde based on symmetry
+    DO g=1,num_eg
+      DO j=1,core_y_size
+        SELECT CASE(prob_sym)
+          CASE('full') !vacuum on all sides
+                dtilde_x(1,j,g)=(0.5D0*h_x(1)/assm_xs(assm_map(1,j))%D(g)+gamma(g))**(-1)
+                dtilde_x(core_x_size+1,j,g)=(0.5D0*h_x(core_x_size)/assm_xs(assm_map(core_x_size,j))%D(g)+gamma(g))**(-1)
+          CASE('qtr','half') !vacuum on right and bot sides or on right bot and top sides
+            dtilde_x(core_x_size+1,j,g)=(0.5D0*h_x(core_x_size)/assm_xs(assm_map(core_x_size,j))%D(g)+gamma(g))**(-1)
+          CASE DEFAULT
+            CALL fatal_error('Invalid symmetry option: '//TRIM(ADJUSTL(prob_sym)))
+        ENDSELECT
+      ENDDO
+      DO i=1,core_x_size
+        SELECT CASE(prob_sym)
+          CASE('full','half') !vacuum on all sides or right and top/bot sides
+            dtilde_y(i,1,g)=(0.5D0*h_y(1)/assm_xs(assm_map(i,1))%D(g)+gamma(g))**(-1)
+            dtilde_y(i,core_y_size+1,g)=(0.5D0*h_y(core_y_size)/assm_xs(assm_map(i,core_y_size))%D(g)+gamma(g))**(-1)
+          CASE('qtr')!vacuum on right and bot sides
+            dtilde_y(i,core_y_size+1,g)=(0.5D0*h_y(core_y_size)/assm_xs(assm_map(i,core_y_size))%D(g)+gamma(g))**(-1)
+          CASE DEFAULT
+            CALL fatal_error('Invalid symmetry option: '//TRIM(ADJUSTL(prob_sym)))
+        ENDSELECT
+      ENDDO
+    ENDDO
+
+    !if we have reflective just set back to 0
+    SELECTCASE(bc_opt)
+      CASE('vac','vacuum','albedo','reflector') !nothing to do, already taken care of in previous block
+      CASE('reflective') !all dtildes should start as zero since that is for reflective at boundary
         dtilde_x=0.0D0
         dtilde_y=0.0D0
-      CASE('albedo') !will eventually be supported so give a debugging stop, not a fatal error
-        STOP 'albedo boundary conditions not yet supported!'
     ENDSELECT
   ENDSUBROUTINE solver_init
 !
@@ -269,59 +308,59 @@ CONTAINS
         DO i=1,core_x_size
           cell_idx=calc_idx(i,j,g)
           !total xs term for the base of the A matrix diagonal
-          amatrix(1,cell_idx)=assm_xs(assm_map(i,j))%sigma_t(g)*assm_pitch
+          amatrix(1,cell_idx)=assm_xs(assm_map(i,j))%sigma_t(g)+assm_xs(assm_map(i,j))%D(g)*ax_buckle
           !left term
           IF(i .NE. 1)THEN
             amatrix(1,cell_idx)=amatrix(1,cell_idx)&
-              +2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
-              +assm_pitch/assm_xs(assm_map(i-1,j))%D(g))**(-1)-dtilde_x(i,j,g)
+              +2.0D0*(h_x(i)/assm_xs(assm_map(i,j))%D(g)&
+              +h_x(i-1)/assm_xs(assm_map(i-1,j))%D(g))**(-1)/h_x(i)-dtilde_x(i,j,g)/h_x(i)
             amatrix(2,cell_idx)=amatrix(2,cell_idx)&
-              -2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
-              +assm_pitch/assm_xs(assm_map(i-1,j))%D(g))**(-1)-dtilde_x(i,j,g)
+              -2.0D0*(h_x(i)/assm_xs(assm_map(i,j))%D(g)&
+              +h_x(i-1)/assm_xs(assm_map(i-1,j))%D(g))**(-1)/h_x(i)-dtilde_x(i,j,g)/h_x(i)
           ELSE
             !boundary condition specified by the dtilde factor computation in the polynomial portion
-            amatrix(1,cell_idx)=amatrix(1,cell_idx)+dtilde_x(i,j,g)
+            amatrix(1,cell_idx)=amatrix(1,cell_idx)+dtilde_x(i,j,g)/h_x(i)
           ENDIF
           !right term
           IF(i .NE. core_x_size)THEN
             amatrix(1,cell_idx)=amatrix(1,cell_idx)&
-              +2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
-              +assm_pitch/assm_xs(assm_map(i+1,j))%D(g))**(-1)+dtilde_x(i+1,j,g)
+              +2.0D0*(h_x(i)/assm_xs(assm_map(i,j))%D(g)&
+              +h_x(i+1)/assm_xs(assm_map(i+1,j))%D(g))**(-1)/h_x(i)+dtilde_x(i+1,j,g)/h_x(i)
             amatrix(3,cell_idx)=amatrix(3,cell_idx)&
-              -2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
-              +assm_pitch/assm_xs(assm_map(i+1,j))%D(g))**(-1)+dtilde_x(i+1,j,g)
+              -2.0D0*(h_x(i)/assm_xs(assm_map(i,j))%D(g)&
+              +h_x(i+1)/assm_xs(assm_map(i+1,j))%D(g))**(-1)/h_x(i)+dtilde_x(i+1,j,g)/h_x(i)
           ELSE
             !boundary condition specified by the dtilde factor computation in the polynomial portion
-            amatrix(1,cell_idx)=amatrix(1,cell_idx)+dtilde_x(i+1,j,g)
+            amatrix(1,cell_idx)=amatrix(1,cell_idx)+dtilde_x(i+1,j,g)/h_x(i)
           ENDIF
           !below term
           IF(j .NE. 1)THEN
             amatrix(1,cell_idx)=amatrix(1,cell_idx)&
-              +2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
-              +assm_pitch/assm_xs(assm_map(i,j-1))%D(g))**(-1)-dtilde_y(i,j,g)
+              +2.0D0*(h_y(j)/assm_xs(assm_map(i,j))%D(g)&
+              +h_y(j-1)/assm_xs(assm_map(i,j-1))%D(g))**(-1)/h_y(j)-dtilde_y(i,j,g)/h_y(j)
             amatrix(4,cell_idx)=amatrix(4,cell_idx)&
-              -2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
-              +assm_pitch/assm_xs(assm_map(i,j-1))%D(g))**(-1)-dtilde_y(i,j,g)
+              -2.0D0*(h_y(j)/assm_xs(assm_map(i,j))%D(g)&
+              +h_y(j-1)/assm_xs(assm_map(i,j-1))%D(g))**(-1)/h_y(j)-dtilde_y(i,j,g)/h_y(j)
           ELSE
             !boundary condition specified by the dtilde factor computation in the polynomial portion
-            amatrix(1,cell_idx)=amatrix(1,cell_idx)+dtilde_y(i,j,g)
+            amatrix(1,cell_idx)=amatrix(1,cell_idx)+dtilde_y(i,j,g)/h_y(j)
           ENDIF
           !above term
           IF(j .NE. core_y_size)THEN
             amatrix(1,cell_idx)=amatrix(1,cell_idx)&
-              +2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
-              +assm_pitch/assm_xs(assm_map(i,j+1))%D(g))**(-1)+dtilde_y(i,j+1,g)
+              +2.0D0*(h_y(j)/assm_xs(assm_map(i,j))%D(g)&
+              +h_y(j+1)/assm_xs(assm_map(i,j+1))%D(g))**(-1)/h_y(j)+dtilde_y(i,j+1,g)/h_y(j)
             amatrix(5,cell_idx)=amatrix(5,cell_idx)&
-              -2.0D0*(assm_pitch/assm_xs(assm_map(i,j))%D(g)&
-              +assm_pitch/assm_xs(assm_map(i,j+1))%D(g))**(-1)+dtilde_y(i,j+1,g)
+              -2.0D0*(h_y(j)/assm_xs(assm_map(i,j))%D(g)&
+              +h_y(j+1)/assm_xs(assm_map(i,j+1))%D(g))**(-1)/h_y(j)+dtilde_y(i,j+1,g)/h_y(j)
           ELSE
             !boundary condition specified by the dtilde factor computation in the polynomial portion
-            amatrix(1,cell_idx)=amatrix(1,cell_idx)+dtilde_y(i,j+1,g)
+            amatrix(1,cell_idx)=amatrix(1,cell_idx)+dtilde_y(i,j+1,g)/h_y(j)
           ENDIF
         ENDDO
       ENDDO
     ENDDO
-    amatrix=amatrix/assm_pitch
+    amatrix=amatrix
   ENDSUBROUTINE build_amatrix
 
   SUBROUTINE stripe_to_dense(stripe, dense)
@@ -485,8 +524,8 @@ CONTAINS
           ELSEIF(i .EQ. core_x_size+1)THEN
             j_x(i,j,g)=dtilde_x(i,j,g)*xflux(i-1,j,g)
           ELSE !not a boundary
-            j_x(i,j,g)=2.0D0*(assm_pitch/assm_xs(assm_map(i-1,j))%D(g)&
-              +assm_pitch/assm_xs(assm_map(i,j))%D(g))*(xflux(i-1,j,g)-xflux(i,j,g))&
+            j_x(i,j,g)=2.0D0*(h_x(i-1)/assm_xs(assm_map(i-1,j))%D(g)&
+              +h_x(i)/assm_xs(assm_map(i,j))%D(g))*(xflux(i-1,j,g)-xflux(i,j,g))&
               +dtilde_x(i,j,g)*(xflux(i-1,j,g)+xflux(i,j,g))
           ENDIF
         ENDDO
@@ -502,8 +541,8 @@ CONTAINS
           ELSEIF(j .EQ. core_y_size+1)THEN
             j_y(i,j,g)=dtilde_y(i,j,g)*xflux(i,j-1,g)
           ELSE !not a boundary
-            j_y(i,j,g)=2.0D0*(assm_pitch/assm_xs(assm_map(i,j-1))%D(g)&
-              +assm_pitch/assm_xs(assm_map(i,j))%D(g))*(xflux(i,j-1,g)-xflux(i,j,g))&
+            j_y(i,j,g)=2.0D0*(h_y(j-1)/assm_xs(assm_map(i,j-1))%D(g)&
+              +h_y(j)/assm_xs(assm_map(i,j))%D(g))*(xflux(i,j-1,g)-xflux(i,j,g))&
               +dtilde_y(i,j,g)*(xflux(i,j-1,g)+xflux(i,j,g))
           ENDIF
         ENDDO
@@ -553,7 +592,7 @@ CONTAINS
     DO i=1,core_x_size
       DO j=1,core_y_size
         DO g=1,num_eg
-          s_bar_x(i,j,g)=l_bar_y(i,j,g)/assm_pitch
+          s_bar_x(i,j,g)=l_bar_y(i,j,g)/h_y(j)
         ENDDO
       ENDDO
     ENDDO
@@ -561,7 +600,7 @@ CONTAINS
     DO i=1,core_x_size
       DO j=1,core_y_size
         DO g=1,num_eg
-          s_bar_y(i,j,g)=l_bar_x(i,j,g)/assm_pitch
+          s_bar_y(i,j,g)=l_bar_x(i,j,g)/h_x(i)
         ENDDO
       ENDDO
     ENDDO

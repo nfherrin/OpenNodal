@@ -13,7 +13,7 @@ OpenNodal_INP_V1
   size 5
   apitch 20.0
   sym full
-  bc vacuum
+  bc zero
 
   assm_map
     2 2 2 2 2

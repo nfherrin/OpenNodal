@@ -37,5 +37,8 @@
 #workspace in folder
 workspace/
 
+#vscode stuff
+*.vscode
+
 #outputs for manuals
 doc/theorymanual/output

@@ -49,6 +49,8 @@ MODULE input_module
   TYPE(blockType) :: blocks(num_blocks)
 
   !> Explicitly defines the interface for an object method subroutine with word array argument
+  !> @param thisCard - The card we're retrieving data for
+  !> @param twords - The string from which the data is being retrieved
   ABSTRACT INTERFACE
     SUBROUTINE prototype_wordarg(thisCard,twords)
       IMPORT :: cardType
@@ -164,7 +166,7 @@ CONTAINS
     !data for CORE block
     i=2
     blocks(i)%bname='[CORE]'
-    blocks(i)%num_cards=6
+    blocks(i)%num_cards=8
     ALLOCATE(blocks(i)%cards(blocks(i)%num_cards))
     j=1
     blocks(i)%cards(j)%cname='dim'
@@ -184,6 +186,12 @@ CONTAINS
     j=6
     blocks(i)%cards(j)%cname='bc'
     blocks(i)%cards(j)%getcard=>get_bc
+    j=7
+    blocks(i)%cards(j)%cname='refl_mat'
+    blocks(i)%cards(j)%getcard=>get_refl_mat
+    j=8
+    blocks(i)%cards(j)%cname='buckling'
+    blocks(i)%cards(j)%getcard=>get_buckling
 
     !data for MATERIAL block
     i=3
@@ -366,8 +374,6 @@ CONTAINS
 
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the problem title
-!> @param this_card - The card we're retrieving data for
-!> @param wwords - The string from which the data is being retrieved
 !>
   SUBROUTINE get_title(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
@@ -388,8 +394,6 @@ CONTAINS
 
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the problem dimensions
-!> @param this_card - The card we're retrieving data for
-!> @param wwords - The string from which the data is being retrieved
 !>
   SUBROUTINE get_dim(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
@@ -406,8 +410,6 @@ CONTAINS
 
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the problem size
-!> @param this_card - The card we're retrieving data for
-!> @param wwords - The string from which the data is being retrieved
 !>
   SUBROUTINE get_size(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
@@ -420,8 +422,6 @@ CONTAINS
 
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the problem pitch
-!> @param this_card - The card we're retrieving data for
-!> @param wwords - The string from which the data is being retrieved
 !>
   SUBROUTINE get_apitch(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
@@ -434,8 +434,6 @@ CONTAINS
 
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the core symmetry
-!> @param this_card - The card we're retrieving data for
-!> @param wwords - The string from which the data is being retrieved
 !>
   SUBROUTINE get_sym(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
@@ -448,8 +446,6 @@ CONTAINS
 
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the core assembly map
-!> @param this_card - The card we're retrieving data for
-!> @param wwords - The string from which the data is being retrieved
 !>
   SUBROUTINE get_assm_map(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
@@ -459,13 +455,15 @@ CONTAINS
     CHARACTER(ll_max) :: t_char,words(lp_max)
     INTEGER(ki4) :: i,ios,j,oct_sym
 
+    LOGICAL :: odd_prob
+
     wwords(1)=TRIM(wwords(1))
     CALL print_log(TRIM(this_card%cname)//' card found')
 
+    IF(MOD(core_size,2) .EQ. 1)odd_prob=.TRUE.
     !allocate the assembly map based upon problem size and symmetry
     !this is the actual problem we will solve, and remember again that the core is assumed square
     ! TODO need to implement ragged core
-    !TODO need to make sure I can do this after getting the symmetry and size
     SELECTCASE(prob_sym)
       CASE('full')
         core_x_size=core_size
@@ -480,6 +478,16 @@ CONTAINS
         CALL fatal_error(TRIM(prob_sym)//' is not a valid symmetry')
     ENDSELECT
     ALLOCATE(assm_map(core_x_size,core_y_size))
+    ALLOCATE(h_x(core_x_size),h_y(core_y_size))
+    h_x=assm_pitch
+    h_y=assm_pitch
+    SELECTCASE(prob_sym)
+      CASE('half')
+        h_x(1)=assm_pitch*0.5D0
+      CASE('qtr')
+        h_x(1)=assm_pitch*0.5D0
+        h_y(1)=assm_pitch*0.5D0
+    ENDSELECT
     assm_map=0
 
     !read in the core map
@@ -511,10 +519,79 @@ CONTAINS
     ENDIF
   ENDSUBROUTINE get_assm_map
 
+  !---------------------------------------------------------------------------------------------------
+  !> @brief Subroutine to read in the boundary conditions option
+  !> @param this_card - The card we're retrieving data for
+  !> @param wwords - The string from which the data is being retrieved
+  !>
+    SUBROUTINE get_bc(this_card,wwords)
+      CLASS(cardType),INTENT(INOUT) :: this_card
+      CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+      INTEGER :: i
+      REAL(kr8),ALLOCATABLE :: hxt(:),hyt(:)
+      INTEGER(ki4),ALLOCATABLE :: amt(:,:)
+
+      CALL print_log(TRIM(this_card%cname)//' card found')
+
+      bc_opt=TRIM(ADJUSTL(wwords(2)))
+
+      SELECTCASE(bc_opt)
+        CASE('vac','vacuum','reflective','zero') !nothing to do, supported
+        CASE('reflector')
+          !add the reflector on the boundary
+          ALLOCATE(amt(core_x_size,core_y_size))
+          ALLOCATE(hxt(core_x_size),hyt(core_y_size))
+          amt=assm_map
+          hxt=h_x
+          hyt=h_y
+          DEALLOCATE(assm_map,h_x,h_y)
+          SELECT CASE(prob_sym)
+            CASE('full')
+              core_x_size=core_x_size+2
+              core_y_size=core_y_size+2
+            CASE('half')
+              core_x_size=core_x_size+1
+              core_y_size=core_y_size+2
+            CASE('qtr')
+              core_x_size=core_x_size+1
+              core_y_size=core_y_size+1
+          ENDSELECT
+          ALLOCATE(assm_map(core_x_size,core_y_size))
+          ALLOCATE(h_x(core_x_size),h_y(core_y_size))
+          assm_map=0
+          h_x=assm_pitch
+          h_y=assm_pitch
+          SELECT CASE(prob_sym)
+            CASE('full')
+              assm_map(2:core_x_size-1,2:core_y_size-1)=amt
+              h_x(2:core_x_size-1)=hxt
+              h_y(2:core_y_size-1)=hyt
+            CASE('half')
+              assm_map(1:core_x_size-1,2:core_y_size-1)=amt
+              h_x(1:core_x_size-1)=hxt
+              h_y(2:core_y_size-1)=hyt
+            CASE('qtr')
+              assm_map(1:core_x_size-1,1:core_y_size-1)=amt
+              h_x(1:core_x_size-1)=hxt
+              h_y(1:core_y_size-1)=hyt
+          ENDSELECT
+        CASE('albedo') !will eventually be supported so give a debugging stop, not a fatal error
+          DO i=3,1000000
+            IF(wwords(i) .EQ. '')EXIT
+          ENDDO
+          num_eg=i-3
+          ALLOCATE(albedos(num_eg))
+          DO i=3,1000000
+            IF(wwords(i) .EQ. '')EXIT
+            READ(wwords(i),*)albedos(i-2)
+          ENDDO
+        CASE DEFAULT
+          CALL fatal_error('Invalid boundary condition given: '//TRIM(bc_opt))
+      ENDSELECT
+    ENDSUBROUTINE get_bc
+
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the nsplit option
-!> @param this_card - The card we're retrieving data for
-!> @param wwords - The string from which the data is being retrieved
 !>
   SUBROUTINE get_nsplit(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
@@ -533,8 +610,6 @@ CONTAINS
 
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the keff tolerance
-!> @param this_card - The card we're retrieving data for
-!> @param wwords - The string from which the data is being retrieved
 !>
   SUBROUTINE get_k_eps(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
@@ -553,8 +628,6 @@ CONTAINS
 
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the flux tolerance
-!> @param this_card - The card we're retrieving data for
-!> @param wwords - The string from which the data is being retrieved
 !>
   SUBROUTINE get_phi_eps(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
@@ -573,8 +646,6 @@ CONTAINS
 
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in max number of iterations
-!> @param this_card - The card we're retrieving data for
-!> @param wwords - The string from which the data is being retrieved
 !>
   SUBROUTINE get_max_its(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
@@ -593,8 +664,6 @@ CONTAINS
 
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in which nodal method is being used, right now only fd and poly supported
-!> @param this_card - The card we're retrieving data for
-!> @param wwords - The string from which the data is being retrieved
 !>
   SUBROUTINE get_nodal_method(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
@@ -617,8 +686,6 @@ CONTAINS
 
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the cross section filename
-!> @param this_card - The card we're retrieving data for
-!> @param wwords - The string from which the data is being retrieved
 !>
   SUBROUTINE get_xs_file(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
@@ -631,8 +698,6 @@ CONTAINS
 
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the cross section mapping
-!> @param this_card - The card we're retrieving data for
-!> @param wwords - The string from which the data is being retrieved
 !>
   SUBROUTINE get_xs_map(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
@@ -663,24 +728,31 @@ CONTAINS
   ENDSUBROUTINE get_xs_map
 
 !---------------------------------------------------------------------------------------------------
-!> @brief Subroutine to read in the boundary conditions option
-!> @param this_card - The card we're retrieving data for
-!> @param wwords - The string from which the data is being retrieved
+!> @brief Subroutine to read in reflector material to fill in gaps, and/or to compute a reflector
+!>    albedo boundary condition
 !>
-  SUBROUTINE get_bc(this_card,wwords)
+  SUBROUTINE get_refl_mat(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
     CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
 
     CALL print_log(TRIM(this_card%cname)//' card found')
 
-    bc_opt=TRIM(ADJUSTL(wwords(2)))
+    READ(wwords(2),*)refl_mat
+  ENDSUBROUTINE get_refl_mat
 
-    SELECTCASE(bc_opt)
-      CASE('vac','vacuum','reflect','reflective') !nothing to do, supported
-      CASE('albedo') !will eventually be supported so give a debugging stop, not a fatal error
-        STOP 'albedo boundary conditions not yet supported!'
-      CASE DEFAULT
-        CALL fatal_error('Invalid boundary condition given: '//TRIM(bc_opt))
-    ENDSELECT
-  ENDSUBROUTINE get_bc
+!---------------------------------------------------------------------------------------------------
+!> @brief Subroutine to read in axial buckling
+!>
+  SUBROUTINE get_buckling(this_card,wwords)
+    CLASS(cardType),INTENT(INOUT) :: this_card
+    CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+
+    CALL print_log(TRIM(this_card%cname)//' card found')
+    IF(wwords(2) .EQ. 'height')THEN
+      READ(wwords(3),*)ax_buckle
+      ax_buckle=pi**2/ax_buckle**2
+    ELSE
+      READ(wwords(2),*)ax_buckle
+    ENDIF
+  ENDSUBROUTINE get_buckling
 ENDMODULE input_module

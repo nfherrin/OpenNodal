@@ -1,13 +1,21 @@
 OpenNodal_INP_V1
 [CASE_DETAILS]
   title 'Steady state IAEA 2D benchmark problem BSS-11 from ANL-7416'
+  nsplit 1
+  k_eps 1.0D-10
+  phi_eps 1.0D-10
+  max_its 10000
+  nodal_method fd
 
 [CORE]
   dim 2D
 
-  size 17
+  size 15
   apitch 20.0
   sym qtr
+  refl_mat 4
+  bc reflector
+  buckling height 351.240736552
 
   assm_map
     3
@@ -16,9 +24,8 @@ OpenNodal_INP_V1
     2 2 2 2
     3 2 2 2 3
     2 2 2 2 1 1
-    2 2 1 1 1 4 4
-    1 1 1 4 4 4
-    4 4 4 4
+    2 2 1 1 1
+    1 1 1
 
 [MATERIAL]
   xs_file bss11.xs
@@ -27,3 +34,4 @@ OpenNodal_INP_V1
     2 macro reg2
     3 macro reg3
     4 macro reg4
+    5 macro reg5
