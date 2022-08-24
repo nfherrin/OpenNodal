@@ -56,27 +56,13 @@ CONTAINS
       ENDIF
 
       !print out the CSV flux data
-      !this commented stuff can help avoid blank regions of the plot
-      ! WRITE(out_unit,'(3ES16.8)')0.0D0,0.0D0,xflux(1,1,g)
-      ! DO j=1,core_y_size
-        ! WRITE(out_unit,'(3ES16.8)')0.0D0,SUM(h_y(1:j))-0.5D0*h_y(j),xflux(1,j,g)
-      ! ENDDO
-      ! WRITE(out_unit,'(3ES16.8)')0.0D0,SUM(h_y),xflux(1,core_y_size,g)
-      ! WRITE(out_unit,*)
       DO i=1,core_x_size
-        ! WRITE(out_unit,'(3ES16.8)')SUM(h_x(1:i))-0.5D0*h_x(i),0.0D0,xflux(i,1,g)
         DO j=1,core_y_size
-          WRITE(out_unit,'(3ES16.8)')SUM(h_x(1:i))-0.5D0*h_x(i),SUM(h_y(1:j))-0.5D0*h_y(j),xflux(i,j,g)
+          WRITE(out_unit,'(ES16.8,A,ES16.8,A,ES16.8)')SUM(h_x(1:i))-0.5D0*h_x(i),', '&
+            ,SUM(h_y(1:j))-0.5D0*h_y(j),', ',xflux(i,j,g)
         ENDDO
-        ! WRITE(out_unit,'(3ES16.8)')SUM(h_x(1:i))-0.5D0*h_x(i),SUM(h_y),xflux(i,core_y_size,g)
         WRITE(out_unit,*)
       ENDDO
-      ! WRITE(out_unit,'(3ES16.8)')SUM(h_x),0.0D0,xflux(core_x_size,1,g)
-      ! DO j=1,core_y_size
-        ! WRITE(out_unit,'(3ES16.8)')SUM(h_x),SUM(h_y(1:j))-0.5D0*h_y(j),xflux(core_x_size,j,g)
-      ! ENDDO
-      ! WRITE(out_unit,'(3ES16.8)')SUM(h_x),SUM(h_y),xflux(core_x_size,core_y_size,g)
-      ! WRITE(out_unit,*)
 
       CLOSE(out_unit)
     ENDDO
