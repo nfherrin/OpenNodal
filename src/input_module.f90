@@ -49,6 +49,8 @@ MODULE input_module
   TYPE(blockType) :: blocks(num_blocks)
 
   !> Explicitly defines the interface for an object method subroutine with word array argument
+  !> @param thisCard - The card we're retrieving data for
+  !> @param twords - The string from which the data is being retrieved
   ABSTRACT INTERFACE
     SUBROUTINE prototype_wordarg(thisCard,twords)
       IMPORT :: cardType
@@ -164,7 +166,7 @@ CONTAINS
     !data for CORE block
     i=2
     blocks(i)%bname='[CORE]'
-    blocks(i)%num_cards=7
+    blocks(i)%num_cards=8
     ALLOCATE(blocks(i)%cards(blocks(i)%num_cards))
     j=1
     blocks(i)%cards(j)%cname='dim'
@@ -187,6 +189,9 @@ CONTAINS
     j=7
     blocks(i)%cards(j)%cname='refl_mat'
     blocks(i)%cards(j)%getcard=>get_refl_mat
+    j=8
+    blocks(i)%cards(j)%cname='buckling'
+    blocks(i)%cards(j)%getcard=>get_buckling
 
     !data for MATERIAL block
     i=3
@@ -369,8 +374,6 @@ CONTAINS
 
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the problem title
-!> @param this_card - The card we're retrieving data for
-!> @param wwords - The string from which the data is being retrieved
 !>
   SUBROUTINE get_title(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
@@ -391,8 +394,6 @@ CONTAINS
 
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the problem dimensions
-!> @param this_card - The card we're retrieving data for
-!> @param wwords - The string from which the data is being retrieved
 !>
   SUBROUTINE get_dim(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
@@ -409,8 +410,6 @@ CONTAINS
 
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the problem size
-!> @param this_card - The card we're retrieving data for
-!> @param wwords - The string from which the data is being retrieved
 !>
   SUBROUTINE get_size(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
@@ -423,8 +422,6 @@ CONTAINS
 
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the problem pitch
-!> @param this_card - The card we're retrieving data for
-!> @param wwords - The string from which the data is being retrieved
 !>
   SUBROUTINE get_apitch(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
@@ -437,8 +434,6 @@ CONTAINS
 
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the core symmetry
-!> @param this_card - The card we're retrieving data for
-!> @param wwords - The string from which the data is being retrieved
 !>
   SUBROUTINE get_sym(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
@@ -451,8 +446,6 @@ CONTAINS
 
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the core assembly map
-!> @param this_card - The card we're retrieving data for
-!> @param wwords - The string from which the data is being retrieved
 !>
   SUBROUTINE get_assm_map(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
@@ -599,8 +592,6 @@ CONTAINS
 
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the nsplit option
-!> @param this_card - The card we're retrieving data for
-!> @param wwords - The string from which the data is being retrieved
 !>
   SUBROUTINE get_nsplit(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
@@ -619,8 +610,6 @@ CONTAINS
 
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the keff tolerance
-!> @param this_card - The card we're retrieving data for
-!> @param wwords - The string from which the data is being retrieved
 !>
   SUBROUTINE get_k_eps(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
@@ -639,8 +628,6 @@ CONTAINS
 
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the flux tolerance
-!> @param this_card - The card we're retrieving data for
-!> @param wwords - The string from which the data is being retrieved
 !>
   SUBROUTINE get_phi_eps(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
@@ -659,8 +646,6 @@ CONTAINS
 
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in max number of iterations
-!> @param this_card - The card we're retrieving data for
-!> @param wwords - The string from which the data is being retrieved
 !>
   SUBROUTINE get_max_its(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
@@ -679,8 +664,6 @@ CONTAINS
 
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in which nodal method is being used, right now only fd and poly supported
-!> @param this_card - The card we're retrieving data for
-!> @param wwords - The string from which the data is being retrieved
 !>
   SUBROUTINE get_nodal_method(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
@@ -703,8 +686,6 @@ CONTAINS
 
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the cross section filename
-!> @param this_card - The card we're retrieving data for
-!> @param wwords - The string from which the data is being retrieved
 !>
   SUBROUTINE get_xs_file(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
@@ -717,8 +698,6 @@ CONTAINS
 
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the cross section mapping
-!> @param this_card - The card we're retrieving data for
-!> @param wwords - The string from which the data is being retrieved
 !>
   SUBROUTINE get_xs_map(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
@@ -748,10 +727,10 @@ CONTAINS
     ENDDO
   ENDSUBROUTINE get_xs_map
 
-
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in reflector material to fill in gaps, and/or to compute a reflector
 !>    albedo boundary condition
+!>
   SUBROUTINE get_refl_mat(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
     CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
@@ -760,4 +739,20 @@ CONTAINS
 
     READ(wwords(2),*)refl_mat
   ENDSUBROUTINE get_refl_mat
+
+!---------------------------------------------------------------------------------------------------
+!> @brief Subroutine to read in axial buckling
+!>
+  SUBROUTINE get_buckling(this_card,wwords)
+    CLASS(cardType),INTENT(INOUT) :: this_card
+    CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+
+    CALL print_log(TRIM(this_card%cname)//' card found')
+    IF(wwords(2) .EQ. 'height')THEN
+      READ(wwords(3),*)ax_buckle
+      ax_buckle=pi**2/ax_buckle**2
+    ELSE
+      READ(wwords(2),*)ax_buckle
+    ENDIF
+  ENDSUBROUTINE get_buckling
 ENDMODULE input_module

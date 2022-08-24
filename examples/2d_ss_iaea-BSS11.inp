@@ -15,6 +15,7 @@ OpenNodal_INP_V1
   sym qtr
   refl_mat 4
   bc reflector
+  buckling height 351.240736552
 
   assm_map
     3

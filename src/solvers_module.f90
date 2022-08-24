@@ -306,7 +306,7 @@ CONTAINS
         DO i=1,core_x_size
           cell_idx=calc_idx(i,j,g)
           !total xs term for the base of the A matrix diagonal
-          amatrix(1,cell_idx)=assm_xs(assm_map(i,j))%sigma_t(g)
+          amatrix(1,cell_idx)=assm_xs(assm_map(i,j))%sigma_t(g)+assm_xs(assm_map(i,j))%D(g)*ax_buckle
           !left term
           IF(i .NE. 1)THEN
             amatrix(1,cell_idx)=amatrix(1,cell_idx)&
