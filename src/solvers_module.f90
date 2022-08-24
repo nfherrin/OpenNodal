@@ -40,7 +40,6 @@ CONTAINS
     IF(nsplit .GT. 1)THEN
       !in this case we are splitting the system and need to remake the assembly map
       !and recompute the core_x_size and core_y_size
-      ALLOCATE(temp_map(core_x_size,core_y_size))
       temp_map=assm_map
       temp_hx=h_x
       temp_hy=h_y
@@ -66,7 +65,6 @@ CONTAINS
       core_x_size=nsplit*core_x_size
       core_y_size=nsplit*core_y_size
       assm_pitch=assm_pitch/(nsplit*1.0D0)
-      DEALLOCATE(temp_map)
     ENDIF
     xkeff = 1d0
     allocate(xflux(core_x_size,core_y_size,num_eg))

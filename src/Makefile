@@ -79,7 +79,7 @@ globals.o : precisions.o xs_types.o
 input_module.o : globals.o errors_module.o string_module.o edits_module.o
 main.o : errors_module.o globals.o input_module.o output_module.o \
 		solvers_module.o analytic_module.o
-output_module.o : globals.o
+output_module.o : errors_module.o globals.o
 precisions.o :
 solvers_module.o : globals.o errors_module.o precisions.o string_module.o \
 		           linalg_module.o
