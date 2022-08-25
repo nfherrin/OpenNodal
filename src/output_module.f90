@@ -47,6 +47,10 @@ CONTAINS
   SUBROUTINE create_flux_csv()
     INTEGER(ki4) :: t_int,g,j,i
     CHARACTER(100) :: t_char
+    REAL(kr8),ALLOCATABLE :: fiss_src(:,:)
+
+    ALLOCATE(fiss_src(core_x_size,core_y_size))
+    fiss_src=0.0D0
 
     DO g=1,num_eg
       WRITE(t_char,'(A,I0,A)')TRIM(base_in)//'_flux_g',g,'.csv'
@@ -60,12 +64,30 @@ CONTAINS
         DO j=1,core_y_size
           WRITE(out_unit,'(ES16.8,A,ES16.8,A,ES16.8)')SUM(h_x(1:i))-0.5D0*h_x(i),', '&
             ,SUM(h_y(1:j))-0.5D0*h_y(j),', ',xflux(i,j,g)
+          fiss_src(i,j)=fiss_src(i,j)+xflux(i,j,g)*assm_xs(assm_map(i,j))%nusigma_f(g)/assm_xs(assm_map(i,j))%nu(g)
         ENDDO
         WRITE(out_unit,*)
       ENDDO
 
       CLOSE(out_unit)
     ENDDO
+
+    WRITE(t_char,'(A)')TRIM(base_in)//'_fiss_src.csv'
+    OPEN(UNIT=out_unit, FILE=t_char, STATUS='REPLACE', ACTION = "WRITE", IOSTAT=t_int, IOMSG=t_char)
+    IF(t_int .NE. 0)THEN
+      CALL fatal_error(t_char)
+    ENDIF
+
+    !print out the CSV flux data
+    DO i=1,core_x_size
+      DO j=1,core_y_size
+        WRITE(out_unit,'(ES16.8,A,ES16.8,A,ES16.8)')SUM(h_x(1:i))-0.5D0*h_x(i),', '&
+          ,SUM(h_y(1:j))-0.5D0*h_y(j),', ',fiss_src(i,j)
+      ENDDO
+      WRITE(out_unit,*)
+    ENDDO
+
+    CLOSE(out_unit)
 
   ENDSUBROUTINE create_flux_csv
 
@@ -84,7 +106,7 @@ CONTAINS
       !output the plot commands
       WRITE(out_unit_temp,'(A)')'# plot.plt'
       WRITE(out_unit_temp,'(A)')'set term png'
-      WRITE(out_unit_temp,'(A,I0,A)')'set output "flux_g',g,'.png"'
+      WRITE(out_unit_temp,'(A,I0,A)')'set output "'//TRIM(base_in)//'_flux_g',g,'.png"'
       WRITE(out_unit_temp,'(A,I0,A)')'set title "Flux Group = ',g,'"'
       WRITE(out_unit_temp,'(A)')'set grid'
       WRITE(out_unit_temp,'(A)')'set xlabel "x [cm]"'
@@ -98,6 +120,29 @@ CONTAINS
 
       CLOSE(out_unit_temp)
     ENDDO
+
+    OPEN(UNIT=out_unit_temp, FILE='temp.plotcommands.temp', STATUS='REPLACE', ACTION = "WRITE", &
+        IOSTAT=t_int, IOMSG=t_char)
+    IF(t_int .NE. 0)THEN
+      CALL fatal_error(t_char)
+    ENDIF
+
+    !output the plot commands
+    WRITE(out_unit_temp,'(A)')'# plot.plt'
+    WRITE(out_unit_temp,'(A)')'set term png'
+    WRITE(out_unit_temp,'(A)')'set output "'//TRIM(base_in)//'_fiss_src.png"'
+    WRITE(out_unit_temp,'(A)')'set title "Fission Source"'
+    WRITE(out_unit_temp,'(A)')'set grid'
+    WRITE(out_unit_temp,'(A)')'set xlabel "x [cm]"'
+    WRITE(out_unit_temp,'(A)')'set ylabel "y [cm]"'
+    WRITE(out_unit_temp,'(A,F16.8)')'set size ratio ',SUM(h_y(:))/SUM(h_x(:))
+    WRITE(out_unit_temp,'(A,ES16.8,A)')'set xrange [0:',SUM(h_x(:)),']'
+    WRITE(out_unit_temp,'(A,ES16.8,A)')'set yrange [',SUM(h_y(:)),':0]'
+    WRITE(out_unit_temp,'(A,A)')'plot "'//TRIM(base_in)//'_fiss_src.csv" with image'
+
+    CALL EXECUTE_COMMAND_LINE('gnuplot -c temp.plotcommands.temp')
+
+    CLOSE(out_unit_temp)
 
     CALL EXECUTE_COMMAND_LINE('rm temp.plotcommands.temp')
   ENDSUBROUTINE plot_flux
