@@ -5,6 +5,7 @@
 MODULE output_module
   USE globals
   USE errors_module
+  USE string_module
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: output_results
@@ -14,10 +15,17 @@ CONTAINS
 
   !output results
   SUBROUTINE output_results()
-    INTEGER(ki4) :: t_int,g,j,i
-    CHARACTER(100) :: t_char
+    INTEGER(ki4) :: t_int,g,j,i,nwords
+    CHARACTER(100) :: t_char,words(100)
 
-    OPEN(UNIT=out_unit, FILE=TRIM(base_in)//'_results.out', STATUS='REPLACE', ACTION = "WRITE", IOSTAT=t_int, IOMSG=t_char)
+    CALL parse(base_in,'.',words,nwords)
+    prob_title=TRIM(ADJUSTL(words(1)))
+    DO i=2,nwords
+      IF(words(i) .EQ. 'inp')EXIT
+      prob_title=TRIM(ADJUSTL(prob_title))//'.'//TRIM(ADJUSTL(words(i)))
+    ENDDO
+
+    OPEN(UNIT=out_unit, FILE=TRIM(prob_title)//'_results.out', STATUS='REPLACE', ACTION = "WRITE", IOSTAT=t_int, IOMSG=t_char)
     IF(t_int .NE. 0)THEN
       CALL fatal_error(t_char)
     ENDIF
@@ -53,7 +61,7 @@ CONTAINS
     fiss_src=0.0D0
 
     DO g=1,num_eg
-      WRITE(t_char,'(A,I0,A)')TRIM(base_in)//'_flux_g',g,'.csv'
+      WRITE(t_char,'(A,I0,A)')TRIM(prob_title)//'_flux_g',g,'.csv'
       OPEN(UNIT=out_unit, FILE=t_char, STATUS='REPLACE', ACTION = "WRITE", IOSTAT=t_int, IOMSG=t_char)
       IF(t_int .NE. 0)THEN
         CALL fatal_error(t_char)
@@ -72,7 +80,7 @@ CONTAINS
       CLOSE(out_unit)
     ENDDO
 
-    WRITE(t_char,'(A)')TRIM(base_in)//'_fiss_src.csv'
+    WRITE(t_char,'(A)')TRIM(prob_title)//'_fiss_src.csv'
     OPEN(UNIT=out_unit, FILE=t_char, STATUS='REPLACE', ACTION = "WRITE", IOSTAT=t_int, IOMSG=t_char)
     IF(t_int .NE. 0)THEN
       CALL fatal_error(t_char)
@@ -88,6 +96,9 @@ CONTAINS
     ENDDO
 
     CLOSE(out_unit)
+
+    DEALLOCATE(fiss_src)
+    !TODO: change output filenames based on problem title...
 
   ENDSUBROUTINE create_flux_csv
 
@@ -106,7 +117,7 @@ CONTAINS
       !output the plot commands
       WRITE(out_unit_temp,'(A)')'# plot.plt'
       WRITE(out_unit_temp,'(A)')'set term png'
-      WRITE(out_unit_temp,'(A,I0,A)')'set output "'//TRIM(base_in)//'_flux_g',g,'.png"'
+      WRITE(out_unit_temp,'(A,I0,A)')'set output "'//TRIM(prob_title)//'_flux_g',g,'.png"'
       WRITE(out_unit_temp,'(A,I0,A)')'set title "Flux Group = ',g,'"'
       WRITE(out_unit_temp,'(A)')'set grid'
       WRITE(out_unit_temp,'(A)')'set xlabel "x [cm]"'
@@ -114,7 +125,7 @@ CONTAINS
       WRITE(out_unit_temp,'(A,F16.8)')'set size ratio ',SUM(h_y(:))/SUM(h_x(:))
       WRITE(out_unit_temp,'(A,ES16.8,A)')'set xrange [0:',SUM(h_x(:)),']'
       WRITE(out_unit_temp,'(A,ES16.8,A)')'set yrange [',SUM(h_y(:)),':0]'
-      WRITE(out_unit_temp,'(A,I0,A)')'plot "'//TRIM(base_in)//'_flux_g',g,'.csv" with image'
+      WRITE(out_unit_temp,'(A,I0,A)')'plot "'//TRIM(prob_title)//'_flux_g',g,'.csv" with image'
 
       CALL EXECUTE_COMMAND_LINE('gnuplot -c temp.plotcommands.temp')
 
@@ -130,7 +141,7 @@ CONTAINS
     !output the plot commands
     WRITE(out_unit_temp,'(A)')'# plot.plt'
     WRITE(out_unit_temp,'(A)')'set term png'
-    WRITE(out_unit_temp,'(A)')'set output "'//TRIM(base_in)//'_fiss_src.png"'
+    WRITE(out_unit_temp,'(A)')'set output "'//TRIM(prob_title)//'_fiss_src.png"'
     WRITE(out_unit_temp,'(A)')'set title "Fission Source"'
     WRITE(out_unit_temp,'(A)')'set grid'
     WRITE(out_unit_temp,'(A)')'set xlabel "x [cm]"'
@@ -138,7 +149,7 @@ CONTAINS
     WRITE(out_unit_temp,'(A,F16.8)')'set size ratio ',SUM(h_y(:))/SUM(h_x(:))
     WRITE(out_unit_temp,'(A,ES16.8,A)')'set xrange [0:',SUM(h_x(:)),']'
     WRITE(out_unit_temp,'(A,ES16.8,A)')'set yrange [',SUM(h_y(:)),':0]'
-    WRITE(out_unit_temp,'(A,A)')'plot "'//TRIM(base_in)//'_fiss_src.csv" with image'
+    WRITE(out_unit_temp,'(A,A)')'plot "'//TRIM(prob_title)//'_fiss_src.csv" with image'
 
     CALL EXECUTE_COMMAND_LINE('gnuplot -c temp.plotcommands.temp')
 
