@@ -110,21 +110,8 @@ CONTAINS
   FUNCTION check_for(software_name)
     CHARACTER(*),INTENT(IN) :: software_name
     LOGICAL :: check_for
-    INTEGER :: check_out_unit=51,t_int
-    CHARACTER(64) :: t_char
-
-    check_for=.FALSE.
-
-    CALL EXECUTE_COMMAND_LINE('which '//TRIM(software_name)//' > temp.softwarecheck.temp')
-    OPEN(UNIT=check_out_unit, FILE='temp.softwarecheck.temp', STATUS='OLD', ACTION = "READ", IOSTAT=t_int, IOMSG=t_char)
-    IF(t_int .NE. 0)THEN
-      WRITE(*,'(A)')TRIM(t_char)
-      STOP 'ERROR IN SOFTWARE CHECKING FOR '//TRIM(software_name)
-    ENDIF
-    READ(check_out_unit,*,IOSTAT=t_int)t_char
-    IF(t_int .NE. 0)t_char=''
-    CLOSE(check_out_unit)
-    CALL EXECUTE_COMMAND_LINE('rm temp.softwarecheck.temp')
-    IF(t_char .NE. '')check_for=.TRUE.
+    INTEGER :: iexit
+    CALL EXECUTE_COMMAND_LINE('which '//TRIM(software_name)//' 2> /dev/null > /dev/null', exitstat=iexit)
+    check_for = (iexit == 0)
   ENDFUNCTION
 ENDMODULE globals
