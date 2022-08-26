@@ -37,6 +37,14 @@ CONTAINS
       ENDDO
     ENDDO
 
+    !create the removal cross section by adding buckling and subtracting self-scatter
+    DO i=1,num_assm_reg
+      DO g=1,num_eg
+        assm_xs(i)%sigma_r(g)=assm_xs(i)%sigma_t(g)+assm_xs(i)%D(g)*ax_buckle &
+          -assm_xs(i)%sigma_scat(g,g)
+      ENDDO
+    ENDDO
+
     IF(nsplit .GT. 1)THEN
       !in this case we are splitting the system and need to remake the assembly map
       !and recompute the core_x_size and core_y_size

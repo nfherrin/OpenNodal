@@ -264,6 +264,8 @@ CONTAINS
       assm_xs(i)%sigma_a=0.0
       ALLOCATE(assm_xs(i)%sigma_t(num_eg))
       assm_xs(i)%sigma_t=0.0
+      ALLOCATE(assm_xs(i)%sigma_r(num_eg))
+      assm_xs(i)%sigma_r=0.0
       ALLOCATE(assm_xs(i)%sigma_scat(num_eg,num_eg))
       assm_xs(i)%sigma_scat=0.0
     ENDDO
