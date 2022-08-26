@@ -84,7 +84,7 @@ CONTAINS
       !output the plot commands
       WRITE(out_unit_temp,'(A)')'# plot.plt'
       WRITE(out_unit_temp,'(A)')'set term png'
-      WRITE(out_unit_temp,'(A,I0,A)')'set output "flux_g',g,'.png"'
+      WRITE(out_unit_temp,'(A,I0,A)')'set output "' // TRIM(base_in) // '_flux_g',g,'.png"'
       WRITE(out_unit_temp,'(A,I0,A)')'set title "Flux Group = ',g,'"'
       WRITE(out_unit_temp,'(A)')'set grid'
       WRITE(out_unit_temp,'(A)')'set xlabel "x [cm]"'

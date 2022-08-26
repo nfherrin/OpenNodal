@@ -7,8 +7,12 @@ MODULE globals
   USE xs_types
   IMPLICIT NONE
 
-  !> input filename, assume no longer than 100 characters
-  CHARACTER(100) :: base_in=''
+  !> input filename, assume no longer than 1024 characters
+  CHARACTER(1024) :: base_in=''
+
+  !> "prefix" of input file. i.e., all characters including final slash
+  !> used for parsing/navigating subsequent filenames in input (e.g., xs_in)
+  CHARACTER(1024) :: prefix_in=''
 
   !> problem title
   CHARACTER(100) :: prob_title=''

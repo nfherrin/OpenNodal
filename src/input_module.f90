@@ -60,6 +60,23 @@ MODULE input_module
   ENDINTERFACE
 
 CONTAINS
+
+  SUBROUTINE get_prefix(fname, prefix)
+    CHARACTER(*), INTENT(IN) :: fname
+    CHARACTER(LEN=LEN(fname)), INTENT(OUT) :: prefix
+
+    INTEGER :: i
+
+    prefix = fname
+    DO i = LEN(prefix),1,-1
+      IF (prefix(i:i) == '/') THEN
+        prefix(i+1:len(prefix)) = ' '
+        RETURN
+      ENDIF
+    ENDDO
+
+  ENDSUBROUTINE get_prefix
+
 !---------------------------------------------------------------------------------------------------
 !> @brief This subroutine reads in command line arguments
 !>
@@ -71,6 +88,8 @@ CONTAINS
     IF(arg_count .NE. 1)STOP 'only give input file argument!'
 
     CALL GET_COMMAND_ARGUMENT(1,base_in)
+    CALL get_prefix(base_in, prefix_in)
+  ! todo need to implement "stub" or base filename for executing in different directory
   ENDSUBROUTINE read_cmd_args
 
 !---------------------------------------------------------------------------------------------------
@@ -694,6 +713,8 @@ CONTAINS
     CALL print_log(TRIM(this_card%cname)//' card found')
 
     xs_in=wwords(2)
+    xs_in = TRIM(ADJUSTL(prefix_in)) // xs_in
+    RETURN
   ENDSUBROUTINE get_xs_file
 
 !---------------------------------------------------------------------------------------------------
