@@ -1,0 +1,34 @@
+OpenNodal_INP_V1
+[CASE_DETAILS]
+  title 'Random 3 group System for Regression Tests'
+  nsplit 1
+  k_eps 1.0D-10
+  phi_eps 1.0D-10
+  max_its 1000000
+  nodal_method fd
+
+[CORE]
+  dim 2D
+
+  size 9
+  apitch 20.0
+  sym qtr
+  refl_mat 5
+  bc reflector
+  buckling height 300
+
+  assm_map
+    3 3 3 2 3
+    3 1 3 3 3
+    3 3 3 3 3
+    3 3 4 3 3
+    3 5 3 3 2
+
+[MATERIAL]
+  xs_file rand.xs
+  xs_map 5
+    1 macro reg1
+    2 macro reg2
+    3 macro reg3
+    4 macro reg4
+    5 macro reg5

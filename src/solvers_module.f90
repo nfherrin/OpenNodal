@@ -276,7 +276,7 @@ CONTAINS
       flux_old=xflux
       fiss_src_sum(1) = fiss_src_sum(2)
 
-      CALL print_log(TRIM(str(iter,4))//'   '//TRIM(str(xkeff,6,'F'))//'   '//TRIM(str(conv_xkeff,2)) &
+      CALL print_log(TRIM(str(iter,5))//'   '//TRIM(str(xkeff,6,'F'))//'   '//TRIM(str(conv_xkeff,2)) &
         //'   '//TRIM(str(conv_xflux,2)))
       IF(nodal_method .EQ. 'poly')THEN
         CALL comp_dtilde()
@@ -314,7 +314,7 @@ CONTAINS
         DO i=1,core_x_size
           cell_idx=calc_idx(i,j,g)
           !total xs term for the base of the A matrix diagonal
-          amatrix(1,cell_idx)=assm_xs(assm_map(i,j))%sigma_t(g)+assm_xs(assm_map(i,j))%D(g)*ax_buckle
+          amatrix(1,cell_idx)=assm_xs(assm_map(i,j))%sigma_r(g)
           !left term
           IF(i .NE. 1)THEN
             amatrix(1,cell_idx)=amatrix(1,cell_idx)&
@@ -484,8 +484,12 @@ CONTAINS
           !set bvec to fission source
           bvec(cell_idx)=fiss_src*assm_xs(loc_id)%chi(g)/xkeff
           ! TODO scattering should be in LHS
-          !and add scattering source
-          DO gp=1,num_eg
+          !add down-scattering source
+          DO gp=1,g-1
+            bvec(cell_idx)=bvec(cell_idx)+xflux(i,j,gp)*assm_xs(loc_id)%sigma_scat(g,gp)
+          ENDDO
+          !and add up-scattering source
+          DO gp=g+1,num_eg
             bvec(cell_idx)=bvec(cell_idx)+xflux(i,j,gp)*assm_xs(loc_id)%sigma_scat(g,gp)
           ENDDO
         ENDDO

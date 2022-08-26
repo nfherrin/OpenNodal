@@ -21,10 +21,8 @@ CONTAINS
     INTEGER(ki4) :: i
     REAL(kr8) :: flux_ratio, kinf
 
-    IF (num_eg /= 2) CALL fatal_error('ONLY supporting 2 energy groups')
-
     DO i = 1,num_assm_reg
-      IF (assm_xs(i)%fissile) THEN
+      IF (assm_xs(i)%fissile .AND. num_eg == 2) THEN
         flux_ratio = assm_xs(i)%sigma_scat(2,1)/assm_xs(i)%sigma_a(2)
         kinf = (assm_xs(i)%nusigma_f(1) + assm_xs(i)%nusigma_f(2)*flux_ratio) / &
           (assm_xs(i)%sigma_a(1) + assm_xs(i)%sigma_scat(2,1))
