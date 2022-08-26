@@ -27,7 +27,6 @@ PROGRAM opennodal
     ! initialize memory
     ! this is done here to allow for multi-state runs in the future rather than
     ! initializing inside of the solver
-    if (num_eg /= 2) call fatal_error('only supporting 2 energy groups')
 
     CALL solver_init()
 
