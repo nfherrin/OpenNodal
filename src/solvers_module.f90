@@ -287,7 +287,7 @@ CONTAINS
     CALL build_amatrix(amat,core_x_size,core_y_size,num_eg,assm_xs,assm_map,h_x,h_y,dtilde_x, &
                         dtilde_y)
 
-    CALL print_log('Iter | Keff     | Conv_Keff | Conv_Flux')
+    CALL print_log(' Iter | Keff     | Conv_Keff | Conv_Flux')
 
     conv_xflux = 1d2*tol_xflux + 1d0
     conv_xkeff = 1d2*tol_xkeff + 1d0
@@ -302,7 +302,7 @@ CONTAINS
 
       ! TODO implement inner tolerances
       DO g=1,num_eg
-        CALL inner_solve(inner_solve_method, prob_size, 1d-3*MIN(tol_xflux,tol_xkeff), 10000, &
+        CALL inner_solve(inner_solve_method, prob_size, 1d-1*MIN(tol_xflux,tol_xkeff), 10000, &
                         amat(:,:,g), bvec(:,g), xflux(:,:,g),core_x_size,core_y_size)
         CALL add_downscatter(bvec,g,core_x_size,core_y_size,num_eg,assm_xs,assm_map,xflux)
       ENDDO
