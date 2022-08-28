@@ -246,7 +246,7 @@ CONTAINS
     !data for caseid block
     i=1
     blocks(i)%bname='[CASE_DETAILS]'
-    blocks(i)%num_cards=6
+    blocks(i)%num_cards=7
     ALLOCATE(blocks(i)%cards(blocks(i)%num_cards))
     j=1
     blocks(i)%cards(j)%cname='title'
@@ -266,6 +266,9 @@ CONTAINS
     j=6
     blocks(i)%cards(j)%cname='nodal_method'
     blocks(i)%cards(j)%getcard=>get_nodal_method
+    j=7
+    blocks(i)%cards(j)%cname='weilandt'
+    blocks(i)%cards(j)%getcard=>get_weilandt
 
     !data for CORE block
     i=2
@@ -785,6 +788,28 @@ CONTAINS
     ENDIF
 
   ENDSUBROUTINE get_nodal_method
+
+!---------------------------------------------------------------------------------------------------
+!> @brief Subroutine to read in which nodal method is being used, right now only fd and poly supported
+!>
+  SUBROUTINE get_weilandt(this_card,wwords)
+    CLASS(cardType),INTENT(INOUT) :: this_card
+    CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+
+    INTEGER(ki4) :: nwords
+    CHARACTER(ll_max) :: t_char,words(lp_max)
+    INTEGER(ki4) :: i,ios,j,oct_sym
+
+    CALL print_log(TRIM(this_card%cname)//' card found')
+
+    wwords(2)=TRIM(ADJUSTL(wwords(2)))
+    READ(wwords(2),*)dl_weilandt
+
+    IF(dl_weilandt .LT. 0.0D0)THEN
+      CALL fatal_error('Invalid Weilandt shift value: '//TRIM(wwords(2)))
+    ENDIF
+
+  ENDSUBROUTINE get_weilandt
 
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the cross section filename
