@@ -303,9 +303,6 @@ CONTAINS
     flux_old=xflux
     ckeff=xkeff
     ckeff_old=ckeff
-    IF(dl_weilandt .GT. 0.0D0)THEN
-      lambda_p=ckeff_old+dl_weilandt
-    ENDIF
 
 
     DO iter = 1,tol_max_iter
@@ -337,6 +334,7 @@ CONTAINS
           write(*,*)lambda_p,xkeff
           ckeff=(1.0D0/lambda_p+1.0D0/xkeff)**(-1)
           write(*,*)ckeff
+          IF(ckeff .LE. 0)STOP 'negative ckeff'
         ENDIF
       ENDIF
       conv_xkeff=ABS(ckeff-ckeff_old) ! absolute
@@ -685,7 +683,7 @@ CONTAINS
     INTEGER(ki4), INTENT(IN) :: core_x_size,core_y_size,num_eg,assm_map(:,:)
     !local variables
     REAL(kr8) :: weilandt_shift_amatrix(5,core_x_size*core_y_size,num_eg)
-    INTEGER(ki4) :: g,i,j,gp,cell_idx,loc_id
+    INTEGER(ki4) :: g,i,j,cell_idx,loc_id
     REAL(kr8) :: fiss_src
     weilandt_shift_amatrix=amat_base
     DO i=1,core_x_size
@@ -693,8 +691,8 @@ CONTAINS
         loc_id=assm_map(i,j)
         cell_idx=calc_idx(i,j,core_x_size)
         fiss_src=0.0D0
-        DO gp=1,num_eg
-          fiss_src=fiss_src+xflux(i,j,gp)*assm_xs(loc_id)%nusigma_f(gp)
+        DO g=1,num_eg
+          fiss_src=fiss_src+xflux(i,j,g)*assm_xs(loc_id)%nusigma_f(g)
         ENDDO
         DO g=1,num_eg
           weilandt_shift_amatrix(1,cell_idx,g)=weilandt_shift_amatrix(1,cell_idx,g)&
