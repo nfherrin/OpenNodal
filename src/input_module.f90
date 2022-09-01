@@ -6,6 +6,7 @@ MODULE input_module
   USE globals
   USE errors_module
   USE string_module
+  USE edits_module
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: read_cmd_args,read_files
@@ -22,8 +23,31 @@ MODULE input_module
   INTEGER(ki4),PARAMETER :: lp_max=100
   !> cross section input filename
   CHARACTER(ll_max) :: xs_in
-
+  !> In file unit
   INTEGER(ki4) :: in_unit
+
+  !variables to be used to gather data for the variables in main, also the defaults
+  INTEGER(ki4) :: p_d=2                           !prob_dim
+  INTEGER(ki4) :: c_s=0                           !core_size
+  INTEGER(ki4) :: x_s=0                           !core_x_size
+  INTEGER(ki4) :: y_s=0                           !core_y_size
+  REAL(kr8) :: a_p=0                              !assm_pitch
+  CHARACTER(100) :: p_s='full'                    !prob_sym
+  INTEGER(ki4),ALLOCATABLE :: a_m(:,:)            !assm_map
+  REAL(kr8), ALLOCATABLE :: d_x(:)                !h_x
+  REAL(kr8), ALLOCATABLE :: d_y(:)                !h_y
+  CHARACTER(100) :: b_o='vacuum'                  !bc_opt
+  REAL(kr8),ALLOCATABLE :: alb(:)                 !albedos
+  INTEGER(ki4) :: n_g                             !num_eg
+  INTEGER(ki4) :: ns=1                            !nsplit
+  REAL(kr8) :: t_xk = 1d-6                        !tol_xkeff
+  REAL(kr8) :: t_xf = 1d-5                        !tol_xflux
+  INTEGER(ki4) :: t_m_i = 100                     !tol_max_iter
+  CHARACTER(100) :: n_m='fd'                      !nodal_method
+  INTEGER(ki4) :: n_a_r=1                         !num_assm_reg
+  TYPE(macro_assm_xs_type),ALLOCATABLE :: a_x(:)  !assm_xs
+  INTEGER(ki4) :: r_m=0                           !refl_mat
+  REAL(kr8) :: a_b=0.0D0                          !ax_buckle
 
   !> This data type stores card information and reads card data
   TYPE :: cardType
@@ -32,7 +56,7 @@ MODULE input_module
     !> logical to tell if block has already appeared
     LOGICAL :: found=.FALSE.
     !> readin procedure, unique for each card
-    PROCEDURE(prototype_wordarg),POINTER :: getcard => NULL()
+    PROCEDURE(prototype_wordarg), POINTER :: getcard => NULL()
   ENDTYPE cardType
 
   !> This data type stores card information
@@ -76,8 +100,19 @@ CONTAINS
 !---------------------------------------------------------------------------------------------------
 !> @brief This subroutine reads in all input files
 !>
-  SUBROUTINE read_files()
-    INTEGER(ki4) :: t_int
+  SUBROUTINE read_files(prob_dim,core_x_size,core_y_size,assm_pitch,prob_sym,assm_map,h_x,h_y, &
+                        bc_opt,albedos,num_eg,nsplit,tol_xkeff,tol_xflux,tol_max_iter,nodal_method, &
+                        num_assm_reg,assm_xs,refl_mat,ax_buckle)
+    !input/output variables
+    INTEGER(ki4), INTENT(OUT) :: prob_dim,core_x_size,core_y_size,num_eg,nsplit,tol_max_iter
+    INTEGER(ki4), INTENT(OUT) :: num_assm_reg,refl_mat
+    REAL(kr8), INTENT(OUT) :: assm_pitch,tol_xkeff,tol_xflux,ax_buckle
+    CHARACTER(100), INTENT(OUT) :: prob_sym,bc_opt,nodal_method
+    INTEGER(ki4), INTENT(OUT), ALLOCATABLE :: assm_map(:,:)
+    REAL(kr8), INTENT(OUT), ALLOCATABLE :: h_x(:),h_y(:),albedos(:)
+    TYPE(macro_assm_xs_type), INTENT(OUT), ALLOCATABLE :: assm_xs(:)
+    !local variables
+    INTEGER(ki4) :: t_int,i
     CHARACTER(100) :: t_char
 
     in_unit=20
@@ -129,6 +164,52 @@ CONTAINS
     ENDDO
 
     CLOSE(in_unit)
+
+    !assign variables to found or default values
+    prob_dim=p_d
+    core_x_size=x_s
+    core_y_size=y_s
+    assm_pitch=a_p
+    prob_sym=p_s
+    ALLOCATE(assm_map(x_s,y_s))
+    assm_map=a_m
+    ALLOCATE(h_x(x_s),h_y(y_s))
+    h_x=d_x
+    h_y=d_y
+    bc_opt=b_o
+    IF(b_o .EQ. 'albedo')THEN
+      ALLOCATE(albedos(n_g))
+      albedos=alb
+    ENDIF
+    num_eg=n_g
+    nsplit=ns
+    tol_xkeff=t_xk
+    tol_xflux=t_xf
+    tol_max_iter=t_m_i
+    nodal_method=n_m
+    num_assm_reg=n_a_r
+    ALLOCATE(assm_xs(n_a_r))
+    refl_mat=r_m
+    ax_buckle=a_b
+    DO i=1,n_a_r
+      ALLOCATE(assm_xs(i)%D(n_g))
+      ALLOCATE(assm_xs(i)%chi(n_g))
+      ALLOCATE(assm_xs(i)%nusigma_f(n_g))
+      ALLOCATE(assm_xs(i)%sigma_t(n_g))
+      ALLOCATE(assm_xs(i)%sigma_a(n_g))
+      ALLOCATE(assm_xs(i)%nu(n_g))
+      ALLOCATE(assm_xs(i)%sigma_r(n_g))
+      ALLOCATE(assm_xs(i)%sigma_scat(n_g,n_g))
+      assm_xs(i)%mat_id=a_x(i)%mat_id
+      assm_xs(i)%D=a_x(i)%D
+      assm_xs(i)%chi=a_x(i)%chi
+      assm_xs(i)%nusigma_f=a_x(i)%nusigma_f
+      assm_xs(i)%nu=a_x(i)%nu
+      assm_xs(i)%sigma_a=a_x(i)%sigma_a
+      assm_xs(i)%sigma_t=a_x(i)%sigma_t
+      assm_xs(i)%sigma_r=a_x(i)%sigma_r
+      assm_xs(i)%sigma_scat=a_x(i)%sigma_scat
+    ENDDO
   ENDSUBROUTINE read_files
 
 !---------------------------------------------------------------------------------------------------
@@ -240,7 +321,6 @@ CONTAINS
 !> @brief This subroutine reads in the cross sections Version 1
 !>
   SUBROUTINE read_xs_inp_v1()
-    USE edits_module, ONLY : edit_xs
     CHARACTER(ll_max) :: t_char,words(lp_max)
     INTEGER(ki4) :: ios,nwords,num_local_xs,i,j
 
@@ -249,76 +329,75 @@ CONTAINS
     CALL get_next_line(t_char,ios)
     CALL parse(t_char,' ',words,nwords)
     READ(words(2),*)num_local_xs
-    READ(words(3),*)num_eg
+    READ(words(3),*)n_g
 
-    DO i=1,num_assm_reg
-      ALLOCATE(assm_xs(i)%D(num_eg))
-      assm_xs(i)%D=0.0
-      ALLOCATE(assm_xs(i)%chi(num_eg))
-      assm_xs(i)%chi=0.0
-      ALLOCATE(assm_xs(i)%nusigma_f(num_eg))
-      assm_xs(i)%nusigma_f=0.0
-      ALLOCATE(assm_xs(i)%nu(num_eg))
-      assm_xs(i)%nu=0.0
-      ALLOCATE(assm_xs(i)%sigma_a(num_eg))
-      assm_xs(i)%sigma_a=0.0
-      ALLOCATE(assm_xs(i)%sigma_t(num_eg))
-      assm_xs(i)%sigma_t=0.0
-      ALLOCATE(assm_xs(i)%sigma_r(num_eg))
-      assm_xs(i)%sigma_r=0.0
-      ALLOCATE(assm_xs(i)%sigma_scat(num_eg,num_eg))
-      assm_xs(i)%sigma_scat=0.0
+    DO i=1,n_a_r
+      ALLOCATE(a_x(i)%D(n_g))
+      ALLOCATE(a_x(i)%chi(n_g))
+      ALLOCATE(a_x(i)%nusigma_f(n_g))
+      ALLOCATE(a_x(i)%nu(n_g))
+      ALLOCATE(a_x(i)%sigma_a(n_g))
+      ALLOCATE(a_x(i)%sigma_t(n_g))
+      ALLOCATE(a_x(i)%sigma_r(n_g))
+      ALLOCATE(a_x(i)%sigma_scat(n_g,n_g))
+      a_x(i)%D=0.0
+      a_x(i)%chi=0.0
+      a_x(i)%nusigma_f=0.0
+      a_x(i)%nu=0.0
+      a_x(i)%sigma_a=0.0
+      a_x(i)%sigma_t=0.0
+      a_x(i)%sigma_r=0.0
+      a_x(i)%sigma_scat=0.0
     ENDDO
 
     !get xs data for each of the assembly regions
-    DO i=1,num_assm_reg
+    DO i=1,n_a_r
       REWIND(in_unit)
       DO
         CALL get_next_line(t_char,ios)
-        IF(ios .NE. 0)CALL fatal_error('Could not find xs for material "'//TRIM(assm_xs(i)%mat_id)//'"')
+        IF(ios .NE. 0)CALL fatal_error('Could not find xs for material "'//TRIM(a_x(i)%mat_id)//'"')
         CALL parse(t_char,' ',words,nwords)
         words(1)=lowercase(words(1))
         !check to see if it's a start of a new xs
         IF(words(1) .EQ. 'id')THEN
           !check to see if it's the correct xs
-          IF(words(2) .EQ. assm_xs(i)%mat_id)THEN
+          IF(words(2) .EQ. a_x(i)%mat_id)THEN
             !get d
             CALL get_next_line(t_char,ios)
             BACKSPACE(in_unit)
-            READ(in_unit,*)assm_xs(i)%D(:)
+            READ(in_unit,*)a_x(i)%D(:)
             !get chi
             CALL get_next_line(t_char,ios)
             BACKSPACE(in_unit)
-            READ(in_unit,*)assm_xs(i)%chi(:)
+            READ(in_unit,*)a_x(i)%chi(:)
             !get numsigma_f
             CALL get_next_line(t_char,ios)
             BACKSPACE(in_unit)
-            READ(in_unit,*)assm_xs(i)%nusigma_f(:)
+            READ(in_unit,*)a_x(i)%nusigma_f(:)
             !get nu
             CALL get_next_line(t_char,ios)
             BACKSPACE(in_unit)
-            READ(in_unit,*)assm_xs(i)%nu(:)
+            READ(in_unit,*)a_x(i)%nu(:)
             !get sigma_a
             CALL get_next_line(t_char,ios)
             BACKSPACE(in_unit)
-            READ(in_unit,*)assm_xs(i)%sigma_a(:)
+            READ(in_unit,*)a_x(i)%sigma_a(:)
             !get sigma_scat
-            DO j=1,num_eg
+            DO j=1,n_g
               CALL get_next_line(t_char,ios)
               BACKSPACE(in_unit)
-              READ(in_unit,*)assm_xs(i)%sigma_scat(j,:)
+              READ(in_unit,*)a_x(i)%sigma_scat(j,:)
             ENDDO
             EXIT
           ENDIF
         ENDIF
       ENDDO
-      DO j=1,num_eg
-        assm_xs(i)%sigma_t(j)=assm_xs(i)%sigma_a(j)+SUM(assm_xs(i)%sigma_scat(:,j))
+      DO j=1,n_g
+        a_x(i)%sigma_t(j)=a_x(i)%sigma_a(j)+SUM(a_x(i)%sigma_scat(:,j))
       ENDDO
     ENDDO
 
-    call edit_xs()
-
+    call edit_xs(a_x,n_a_r,n_g)
   ENDSUBROUTINE read_xs_inp_v1
 
 !---------------------------------------------------------------------------------------------------
@@ -404,7 +483,7 @@ CONTAINS
     CALL print_log(TRIM(this_card%cname)//' card found')
 
     IF(wwords(2) .EQ. '2D')THEN
-      prob_dim=2
+      p_d=2
     ELSE
       CALL fatal_error(TRIM(wwords(2))//' is not a valid dimension.')
     ENDIF
@@ -419,7 +498,7 @@ CONTAINS
 
     CALL print_log(TRIM(this_card%cname)//' card found')
 
-    READ(wwords(2),*)core_size
+    READ(wwords(2),*)c_s
   ENDSUBROUTINE get_size
 
 !---------------------------------------------------------------------------------------------------
@@ -431,7 +510,7 @@ CONTAINS
 
     CALL print_log(TRIM(this_card%cname)//' card found')
 
-    READ(wwords(2),*)assm_pitch
+    READ(wwords(2),*)a_p
   ENDSUBROUTINE get_apitch
 
 !---------------------------------------------------------------------------------------------------
@@ -443,7 +522,7 @@ CONTAINS
 
     CALL print_log(TRIM(this_card%cname)//' card found')
 
-    prob_sym=TRIM(lowercase(wwords(2)))
+    p_s=TRIM(lowercase(wwords(2)))
   ENDSUBROUTINE get_sym
 
 !---------------------------------------------------------------------------------------------------
@@ -462,59 +541,59 @@ CONTAINS
     wwords(1)=TRIM(wwords(1))
     CALL print_log(TRIM(this_card%cname)//' card found')
 
-    IF(MOD(core_size,2) .EQ. 1)odd_prob=.TRUE.
+    IF(MOD(c_s,2) .EQ. 1)odd_prob=.TRUE.
     !allocate the assembly map based upon problem size and symmetry
     !this is the actual problem we will solve, and remember again that the core is assumed square
     ! TODO need to implement ragged core
-    SELECTCASE(prob_sym)
+    SELECTCASE(p_s)
       CASE('full')
-        core_x_size=core_size
-        core_y_size=core_size
+        x_s=c_s
+        y_s=c_s
       CASE('half')
-        core_x_size=CEILING((core_size-1.0D-2)/2.0)
-        core_y_size=core_size
+        x_s=CEILING((c_s-1.0D-2)/2.0)
+        y_s=c_s
       CASE('qtr')
-        core_x_size=CEILING((core_size-1.0D-2)/2.0)
-        core_y_size=CEILING((core_size-1.0D-2)/2.0)
+        x_s=CEILING((c_s-1.0D-2)/2.0)
+        y_s=CEILING((c_s-1.0D-2)/2.0)
       CASE DEFAULT
-        CALL fatal_error(TRIM(prob_sym)//' is not a valid symmetry')
+        CALL fatal_error(TRIM(p_s)//' is not a valid symmetry')
     ENDSELECT
-    ALLOCATE(assm_map(core_x_size,core_y_size))
-    ALLOCATE(h_x(core_x_size),h_y(core_y_size))
-    h_x=assm_pitch
-    h_y=assm_pitch
-    SELECTCASE(prob_sym)
+    ALLOCATE(a_m(x_s,y_s))
+    ALLOCATE(d_x(x_s),d_y(y_s))
+    d_x=a_p
+    d_y=a_p
+    SELECTCASE(p_s)
       CASE('half')
-        h_x(1)=assm_pitch*0.5D0
+        d_x(1)=a_p*0.5D0
       CASE('qtr')
-        h_x(1)=assm_pitch*0.5D0
-        h_y(1)=assm_pitch*0.5D0
+        d_x(1)=a_p*0.5D0
+        d_y(1)=a_p*0.5D0
     ENDSELECT
-    assm_map=0
+    a_m=0
 
     !read in the core map
-    DO i=1,core_y_size
+    DO i=1,y_s
       CALL get_next_line(t_char,ios)
       IF(ios .NE. 0)CALL fatal_error('Given assembly map incomplete!')
       !parse to get all data on line
       CALL parse(t_char,' ',words,nwords)
       DO j=1,nwords
-        READ(words(j),*)assm_map(j,i)
+        READ(words(j),*)a_m(j,i)
       ENDDO
     ENDDO
 
     !correct if given an octant symmetry
-    IF(prob_sym .EQ. 'qtr')THEN
+    IF(p_s .EQ. 'qtr')THEN
       oct_sym=0
-      DO i=1,core_y_size
-        DO j=i+1,core_x_size
-          oct_sym=oct_sym+ABS(assm_map(j,i))
+      DO i=1,y_s
+        DO j=i+1,x_s
+          oct_sym=oct_sym+ABS(a_m(j,i))
         ENDDO
       ENDDO
       IF(oct_sym .EQ. 0)THEN
-        DO i=1,core_y_size
-          DO j=i+1,core_x_size
-            assm_map(j,i)=assm_map(i,j)
+        DO i=1,y_s
+          DO j=i+1,x_s
+            a_m(j,i)=a_m(i,j)
           ENDDO
         ENDDO
       ENDIF
@@ -535,60 +614,60 @@ CONTAINS
 
       CALL print_log(TRIM(this_card%cname)//' card found')
 
-      bc_opt=TRIM(ADJUSTL(wwords(2)))
+      b_o=TRIM(ADJUSTL(wwords(2)))
 
-      SELECTCASE(bc_opt)
+      SELECTCASE(b_o)
         CASE('vac','vacuum','reflective','zero') !nothing to do, supported
         CASE('reflector')
           !add the reflector on the boundary
-          ALLOCATE(amt(core_x_size,core_y_size))
-          ALLOCATE(hxt(core_x_size),hyt(core_y_size))
-          amt=assm_map
-          hxt=h_x
-          hyt=h_y
-          DEALLOCATE(assm_map,h_x,h_y)
-          SELECT CASE(prob_sym)
+          ALLOCATE(amt(x_s,y_s))
+          ALLOCATE(hxt(x_s),hyt(y_s))
+          amt=a_m
+          hxt=d_x
+          hyt=d_y
+          DEALLOCATE(a_m,d_x,d_y)
+          SELECT CASE(p_s)
             CASE('full')
-              core_x_size=core_x_size+2
-              core_y_size=core_y_size+2
+              x_s=x_s+2
+              y_s=y_s+2
             CASE('half')
-              core_x_size=core_x_size+1
-              core_y_size=core_y_size+2
+              x_s=x_s+1
+              y_s=y_s+2
             CASE('qtr')
-              core_x_size=core_x_size+1
-              core_y_size=core_y_size+1
+              x_s=x_s+1
+              y_s=y_s+1
           ENDSELECT
-          ALLOCATE(assm_map(core_x_size,core_y_size))
-          ALLOCATE(h_x(core_x_size),h_y(core_y_size))
-          assm_map=0
-          h_x=assm_pitch
-          h_y=assm_pitch
-          SELECT CASE(prob_sym)
+          ALLOCATE(a_m(x_s,y_s))
+          ALLOCATE(d_x(x_s),d_y(y_s))
+          a_m=0
+          d_x=a_p
+          d_y=a_p
+          SELECT CASE(p_s)
             CASE('full')
-              assm_map(2:core_x_size-1,2:core_y_size-1)=amt
-              h_x(2:core_x_size-1)=hxt
-              h_y(2:core_y_size-1)=hyt
+              a_m(2:x_s-1,2:y_s-1)=amt
+              d_x(2:x_s-1)=hxt
+              d_y(2:y_s-1)=hyt
             CASE('half')
-              assm_map(1:core_x_size-1,2:core_y_size-1)=amt
-              h_x(1:core_x_size-1)=hxt
-              h_y(2:core_y_size-1)=hyt
+              a_m(1:x_s-1,2:y_s-1)=amt
+              d_x(1:x_s-1)=hxt
+              d_y(2:y_s-1)=hyt
             CASE('qtr')
-              assm_map(1:core_x_size-1,1:core_y_size-1)=amt
-              h_x(1:core_x_size-1)=hxt
-              h_y(1:core_y_size-1)=hyt
+              a_m(1:x_s-1,1:y_s-1)=amt
+              d_x(1:x_s-1)=hxt
+              d_y(1:y_s-1)=hyt
           ENDSELECT
-        CASE('albedo') !will eventually be supported so give a debugging stop, not a fatal error
+        CASE('albedo')
           DO i=3,1000000
             IF(wwords(i) .EQ. '')EXIT
           ENDDO
-          num_eg=i-3
-          ALLOCATE(albedos(num_eg))
+          n_g=i-3
+          ALLOCATE(alb(n_g))
           DO i=3,1000000
             IF(wwords(i) .EQ. '')EXIT
-            READ(wwords(i),*)albedos(i-2)
+            READ(wwords(i),*)alb(i-2)
           ENDDO
         CASE DEFAULT
-          CALL fatal_error('Invalid boundary condition given: '//TRIM(bc_opt))
+          CALL fatal_error('Invalid boundary condition given: '//TRIM(b_o))
       ENDSELECT
     ENDSUBROUTINE get_bc
 
@@ -606,7 +685,7 @@ CONTAINS
     wwords(1)=TRIM(wwords(1))
     CALL print_log(TRIM(this_card%cname)//' card found')
 
-    READ(wwords(2),*)nsplit
+    READ(wwords(2),*)ns
 
   ENDSUBROUTINE get_nsplit
 
@@ -624,7 +703,7 @@ CONTAINS
     wwords(1)=TRIM(wwords(1))
     CALL print_log(TRIM(this_card%cname)//' card found')
 
-    READ(wwords(2),*)tol_xkeff
+    READ(wwords(2),*)t_xk
 
   ENDSUBROUTINE get_k_eps
 
@@ -642,7 +721,7 @@ CONTAINS
     wwords(1)=TRIM(wwords(1))
     CALL print_log(TRIM(this_card%cname)//' card found')
 
-    READ(wwords(2),*)tol_xflux
+    READ(wwords(2),*)t_xf
 
   ENDSUBROUTINE get_phi_eps
 
@@ -660,7 +739,7 @@ CONTAINS
     wwords(1)=TRIM(wwords(1))
     CALL print_log(TRIM(this_card%cname)//' card found')
 
-    READ(wwords(2),*)tol_max_iter
+    READ(wwords(2),*)t_m_i
 
   ENDSUBROUTINE get_max_its
 
@@ -678,10 +757,10 @@ CONTAINS
     wwords(1)=TRIM(wwords(1))
     CALL print_log(TRIM(this_card%cname)//' card found')
 
-    nodal_method=TRIM(ADJUSTL(wwords(2)))
+    n_m=TRIM(ADJUSTL(wwords(2)))
 
-    IF(nodal_method .NE. 'poly' .AND. nodal_method .NE. 'fd')THEN
-      CALL fatal_error('Invalid nodal method: '//TRIM(nodal_method))
+    IF(n_m .NE. 'poly' .AND. n_m .NE. 'fd')THEN
+      CALL fatal_error('Invalid nodal method: '//TRIM(n_m))
     ENDIF
 
   ENDSUBROUTINE get_nodal_method
@@ -710,11 +789,11 @@ CONTAINS
 
     CALL print_log(TRIM(this_card%cname)//' card found')
 
-    READ(wwords(2),*)num_assm_reg
-    IF(MAXVAL(assm_map) .GT. num_assm_reg)CALL fatal_error('Assembly map index outside of range of xs.')
-    ALLOCATE(assm_xs(num_assm_reg))
+    READ(wwords(2),*)n_a_r
+    IF(MAXVAL(a_m) .GT. n_a_r)CALL fatal_error('Assembly map index outside of range of xs.')
+    ALLOCATE(a_x(n_a_r))
 
-    DO i=1,num_assm_reg
+    DO i=1,n_a_r
       CALL get_next_line(t_char,ios)
       IF(ios .NE. 0)CALL fatal_error('Given cross section map incomplete!')
       CALL parse(t_char,' ',words,nwords)
@@ -722,7 +801,7 @@ CONTAINS
       READ(words(1),*)ios
       IF(ios .NE. i)CALL fatal_error('xs map should be in order and complete!')
       IF(words(2) .EQ. 'macro')THEN
-        assm_xs(i)%mat_id=TRIM(words(3))
+        a_x(i)%mat_id=TRIM(ADJUSTL(words(3)))
       ELSE
         CALL fatal_error(TRIM(words(2))//' xs not yet supported.')
       ENDIF
@@ -739,7 +818,7 @@ CONTAINS
 
     CALL print_log(TRIM(this_card%cname)//' card found')
 
-    READ(wwords(2),*)refl_mat
+    READ(wwords(2),*)r_m
   ENDSUBROUTINE get_refl_mat
 
 !---------------------------------------------------------------------------------------------------
@@ -751,10 +830,10 @@ CONTAINS
 
     CALL print_log(TRIM(this_card%cname)//' card found')
     IF(wwords(2) .EQ. 'height')THEN
-      READ(wwords(3),*)ax_buckle
-      ax_buckle=pi**2/ax_buckle**2
+      READ(wwords(3),*)a_b
+      a_b=pi**2/a_b**2
     ELSE
-      READ(wwords(2),*)ax_buckle
+      READ(wwords(2),*)a_b
     ENDIF
   ENDSUBROUTINE get_buckling
 ENDMODULE input_module

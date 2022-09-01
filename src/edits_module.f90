@@ -3,6 +3,9 @@
 !> @brief Module for performing edits
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++!
 MODULE edits_module
+  USE globals
+  USE xs_types
+  USE string_module
 IMPLICIT NONE
 
 CONTAINS
@@ -10,13 +13,9 @@ CONTAINS
 !---------------------------------------------------------------------------------------------------
 !> @brief This subroutine edits the cross sections, calculating the kinf for each assembly
 !>
-  SUBROUTINE edit_xs()
-    USE string_module, ONLY : str
-    USE xs_types, ONLY : macro_assm_xs_type
-    USE precisions, ONLY : ki4, kr8
-    USE globals, ONLY : stdout_unit, num_assm_reg, assm_xs, num_eg, print_log
-    USE errors_module, ONLY : fatal_error
-    IMPLICIT NONE
+  SUBROUTINE edit_xs(assm_xs,num_assm_reg,num_eg)
+    TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
+    INTEGER, INTENT(IN) :: num_assm_reg,num_eg
 
     INTEGER(ki4) :: i
     REAL(kr8) :: flux_ratio, kinf

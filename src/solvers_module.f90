@@ -5,6 +5,7 @@
 MODULE solvers_module
   USE globals
   USE errors_module
+  USE xs_types
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: solver,solver_init
@@ -13,9 +14,8 @@ MODULE solvers_module
 
 CONTAINS
 
-  INTEGER PURE FUNCTION calc_idx(i, j)
-    USE globals, ONLY : core_x_size, core_y_size
-    INTEGER, INTENT(IN) :: i, j
+  INTEGER PURE FUNCTION calc_idx(i, j, core_x_size)
+    INTEGER, INTENT(IN) :: i, j, core_x_size
     calc_idx=(j-1)*core_x_size+i
     RETURN
   ENDFUNCTION calc_idx
@@ -23,7 +23,21 @@ CONTAINS
 !---------------------------------------------------------------------------------------------------
 !> @brief This subroutine solves the nodal problem
 !>
-  SUBROUTINE solver_init()
+  SUBROUTINE solver_init(core_x_size,core_y_size,num_eg,assm_map,refl_mat,num_assm_reg,assm_xs, &
+                          ax_buckle,h_x,h_y,nsplit,assm_pitch,xkeff,xflux,dtilde_x,dtilde_y,bc_opt, &
+                          albedos,prob_sym)
+    !input/output variables
+    INTEGER(ki4), INTENT(INOUT) :: core_x_size,core_y_size
+    INTEGER(ki4), INTENT(INOUT), ALLOCATABLE :: assm_map(:,:)
+    INTEGER(ki4), INTENT(IN) :: num_eg,refl_mat,num_assm_reg,nsplit
+    TYPE(macro_assm_xs_type), INTENT(INOUT) :: assm_xs(:)
+    REAL(kr8), INTENT(IN) :: ax_buckle,albedos(:)
+    REAL(kr8), INTENT(INOUT) :: assm_pitch
+    REAL(kr8), INTENT(OUT) :: xkeff
+    REAL(kr8), INTENT(INOUT), ALLOCATABLE :: h_x(:),h_y(:)
+    REAL(kr8), INTENT(OUT), ALLOCATABLE :: xflux(:,:,:),dtilde_x(:,:,:),dtilde_y(:,:,:)
+    CHARACTER(100), INTENT(IN) :: bc_opt,prob_sym
+    !local variables
     INTEGER :: i,ii,j,jj,g,ip,jp,temp_map(core_x_size,core_y_size)
     INTEGER :: temp_hx(core_x_size),temp_hy(core_y_size)
     REAL(kr8) :: gamma(num_eg)
@@ -75,7 +89,7 @@ CONTAINS
       assm_pitch=assm_pitch/(nsplit*1.0D0)
     ENDIF
     xkeff = 1d0
-    allocate(xflux(core_x_size,core_y_size,num_eg))
+    ALLOCATE(xflux(core_x_size,core_y_size,num_eg))
     xflux = 1d0
     !allocate dtildes
     ALLOCATE(dtilde_x(core_x_size+1,core_y_size,num_eg))
@@ -146,8 +160,6 @@ CONTAINS
 !> @param tol_inner_maxit -
 !>
   SUBROUTINE sor(aa, b, flux, rank, omega, tol_inner_x, tol_inner_maxit)
-    USE precisions, ONLY : ki4, kr8
-    USE globals, ONLY : core_x_size, core_y_size, num_eg, print_log
     IMPLICIT NONE
     ! designed for a 5-stripe matrix with the diagonal in the fifth position
     REAL(kr8),    INTENT(in) :: aa(:,:) ! (5, rank)
@@ -158,266 +170,256 @@ CONTAINS
     REAL(kr8),    INTENT(in) :: tol_inner_x
     INTEGER(ki4), INTENT(in) :: tol_inner_maxit
 
-    INTEGER(ki4) :: i, j, iter
-    INTEGER(ki4) :: cell_idx
-    REAL(kr8)    :: zum, xdif, xmax
-    REAL(kr8)    :: fold, fnew
-    REAL(kr8)    :: converge
+    ! INTEGER(ki4) :: i, j, iter
+    ! INTEGER(ki4) :: cell_idx
+    ! REAL(kr8)    :: zum, xdif, xmax
+    ! REAL(kr8)    :: fold, fnew
+    ! REAL(kr8)    :: converge
 
-    ! TODO implement gg array so i dont have to track boundaries everywhere
+    ! ! TODO implement gg array so i dont have to track boundaries everywhere
 
-    DO iter = 1,tol_inner_maxit
-      xdif = 0d0
-      xmax = 0d0
-      DO j = 1,core_y_size
-        DO i = 1,core_x_size
+    ! DO iter = 1,tol_inner_maxit
+    !   xdif = 0d0
+    !   xmax = 0d0
+    !   DO j = 1,core_y_size
+    !     DO i = 1,core_x_size
 
-          zum = 0d0
-          cell_idx=calc_idx(i,j)
+    !       zum = 0d0
+    !       cell_idx=calc_idx(i,j)
 
-          ! west
-          IF (i .NE. 1)           zum = zum + aa(2,cell_idx)*flux(i-1,j)
-          ! east
-          IF (i .NE. core_x_size) zum = zum + aa(3,cell_idx)*flux(i+1,j)
-          ! south
-          IF (j .NE. 1)           zum = zum + aa(4,cell_idx)*flux(i,j-1)
-          ! north
-          IF (j .NE. core_y_size) zum = zum + aa(5,cell_idx)*flux(i,j+1)
+    !       ! west
+    !       IF (i .NE. 1)           zum = zum + aa(2,cell_idx)*flux(i-1,j)
+    !       ! east
+    !       IF (i .NE. core_x_size) zum = zum + aa(3,cell_idx)*flux(i+1,j)
+    !       ! south
+    !       IF (j .NE. 1)           zum = zum + aa(4,cell_idx)*flux(i,j-1)
+    !       ! north
+    !       IF (j .NE. core_y_size) zum = zum + aa(5,cell_idx)*flux(i,j+1)
 
-          zum  = (b(cell_idx) - zum) / aa(1,cell_idx)
-          fold = flux(i,j)
-          fnew = fold + omega*(zum - fold)
-          xdif = MAX(xdif, ABS(fnew-fold))
-          xmax = MAX(xmax, ABS(fnew))
+    !       zum  = (b(cell_idx) - zum) / aa(1,cell_idx)
+    !       fold = flux(i,j)
+    !       fnew = fold + omega*(zum - fold)
+    !       xdif = MAX(xdif, ABS(fnew-fold))
+    !       xmax = MAX(xmax, ABS(fnew))
 
-          flux(i,j) = fnew
+    !       flux(i,j) = fnew
 
-        ENDDO ! i = 1,core_x_size
-      ENDDO ! j = 1,core_y_size
-      converge = xdif/xmax
-      IF (converge < tol_inner_x) RETURN
-    ENDDO ! iter = 1,toL_inner_maxit
+    !     ENDDO ! i = 1,core_x_size
+    !   ENDDO ! j = 1,core_y_size
+    !   converge = xdif/xmax
+    !   IF (converge < tol_inner_x) RETURN
+    ! ENDDO ! iter = 1,toL_inner_maxit
 
-    CALL print_log('WARNING: SOR not converged')
+    ! CALL print_log('WARNING: SOR not converged')
   ENDSUBROUTINE sor
 
 !---------------------------------------------------------------------------------------------------
 !> @brief This subroutine solves the nodal problem
 !>
   subroutine solver()
-    USE globals, ONLY : core_x_size, core_y_size, &
-      xkeff, xflux, tol_max_iter, tol_xkeff, tol_xflux
-    USE precisions, ONLY : ki4, kr8
-    USE globals, ONLY : print_log
-    USE string_module, ONLY : str
-    USE linalg_module, ONLY : norm
-    IMPLICIT NONE
+    ! INTEGER(ki4) :: i, j, gp, g
+    ! INTEGER(ki4) :: iter
+    ! REAL(kr8) :: conv_xflux, conv_xkeff,keff_old
 
-    INTEGER(ki4) :: i, j, gp, g
-    INTEGER(ki4) :: iter
-    REAL(kr8) :: conv_xflux, conv_xkeff,keff_old
+    ! REAL(kr8), ALLOCATABLE :: amat(:,:,:),flux_old(:,:,:) ! (core_x_size*core_y_size*num_eg, core_x_size*core_y_size*num_eg)
+    ! REAL(kr8), ALLOCATABLE :: bvec(:,:)
 
-    REAL(kr8), ALLOCATABLE :: amat(:,:,:),flux_old(:,:,:) ! (core_x_size*core_y_size*num_eg, core_x_size*core_y_size*num_eg)
-    REAL(kr8), ALLOCATABLE :: bvec(:,:)
+    ! REAL(kr8) :: fiss_src_sum(2)
 
-    REAL(kr8) :: fiss_src_sum(2)
+    ! INTEGER :: prob_size
 
-    INTEGER :: prob_size
+    ! prob_size=core_x_size*core_y_size
 
-    prob_size=core_x_size*core_y_size
+    ! ! build amatrix. This will change with dtilde
+    ! ALLOCATE(amat(5, core_x_size*core_y_size,num_eg)) ! eg by problem size
+    ! ALLOCATE(flux_old(core_x_size,core_y_size,num_eg))
+    ! ALLOCATE(bvec(prob_size,num_eg))
 
-    ! build amatrix. This will change with dtilde
-    ALLOCATE(amat(5, core_x_size*core_y_size,num_eg)) ! eg by problem size
-    ALLOCATE(flux_old(core_x_size,core_y_size,num_eg))
-    ALLOCATE(bvec(prob_size,num_eg))
+    ! ! TODO this will need to be done on every iteration
+    ! CALL build_amatrix(amat)
 
-    ! TODO this will need to be done on every iteration
-    CALL build_amatrix(amat)
+    ! CALL print_log('Iter | Keff     | Conv_Keff | Conv_Flux')
 
-    CALL print_log('Iter | Keff     | Conv_Keff | Conv_Flux')
+    ! xflux = 1d0
 
-    xflux = 1d0
-
-    conv_xflux = 1d2*tol_xflux + 1d0
-    conv_xkeff = 1d2*tol_xkeff + 1d0
-    flux_old=xflux
-    keff_old=xkeff
+    ! conv_xflux = 1d2*tol_xflux + 1d0
+    ! conv_xkeff = 1d2*tol_xkeff + 1d0
+    ! flux_old=xflux
+    ! keff_old=xkeff
 
 
-    DO iter = 1,tol_max_iter
+    ! DO iter = 1,tol_max_iter
 
-      ! build the bvec based on current keff and flux
-      CALL build_bvec(bvec)
+    !   ! build the bvec based on current keff and flux
+    !   CALL build_bvec(bvec)
 
-      ! TODO implement inner tolerances
-      DO g=1,num_eg
-        CALL inner_solve(inner_solve_method, prob_size, 1d-3*MIN(tol_xflux,tol_xkeff), 10000, &
-                        amat(:,:,g), bvec(:,g), xflux(:,:,g))
-        CALL add_downscatter(bvec,g)
-      ENDDO
+    !   ! TODO implement inner tolerances
+    !   DO g=1,num_eg
+    !     CALL inner_solve(inner_solve_method, prob_size, 1d-3*MIN(tol_xflux,tol_xkeff), 10000, &
+    !                     amat(:,:,g), bvec(:,g), xflux(:,:,g))
+    !     CALL add_downscatter(bvec,g)
+    !   ENDDO
 
-      CALL calc_fiss_src_sum(fiss_src_sum(2))
+    !   CALL calc_fiss_src_sum(fiss_src_sum(2))
 
-      IF (iter > 1) xkeff=xkeff*fiss_src_sum(2)/fiss_src_sum(1)
-      conv_xkeff=ABS(xkeff-keff_old) ! absolute
+    !   IF (iter > 1) xkeff=xkeff*fiss_src_sum(2)/fiss_src_sum(1)
+    !   conv_xkeff=ABS(xkeff-keff_old) ! absolute
 
-      ! maximal relative change in flux
-      ! TODO should be measured in power/fission source
-      conv_xflux = 0d0
-      DO gp = 1,num_eg
-        DO j = 1,core_y_size
-          DO i = 1,core_x_size
-            conv_xflux = MAX(conv_xflux, &
-              ABS(xflux(i,j,gp)-flux_old(i,j,gp))/xflux(i,j,gp))
-          ENDDO ! i = 1,core_x_size
-        ENDDO ! j = 1,core_y_size
-      ENDDO ! gp = 1,num_eq
+    !   ! maximal relative change in flux
+    !   ! TODO should be measured in power/fission source
+    !   conv_xflux = 0d0
+    !   DO gp = 1,num_eg
+    !     DO j = 1,core_y_size
+    !       DO i = 1,core_x_size
+    !         conv_xflux = MAX(conv_xflux, &
+    !           ABS(xflux(i,j,gp)-flux_old(i,j,gp))/xflux(i,j,gp))
+    !       ENDDO ! i = 1,core_x_size
+    !     ENDDO ! j = 1,core_y_size
+    !   ENDDO ! gp = 1,num_eq
 
-      ! store old data
-      keff_old=xkeff
-      flux_old=xflux
-      fiss_src_sum(1) = fiss_src_sum(2)
+    !   ! store old data
+    !   keff_old=xkeff
+    !   flux_old=xflux
+    !   fiss_src_sum(1) = fiss_src_sum(2)
 
-      CALL print_log(TRIM(str(iter,5))//'   '//TRIM(str(xkeff,6,'F'))//'   '//TRIM(str(conv_xkeff,2)) &
-        //'   '//TRIM(str(conv_xflux,2)))
-      IF(nodal_method .EQ. 'poly')THEN
-        CALL comp_dtilde()
-        CALL build_amatrix(amat)
-      ENDIF
+    !   CALL print_log(TRIM(str(iter,5))//'   '//TRIM(str(xkeff,6,'F'))//'   '//TRIM(str(conv_xkeff,2)) &
+    !     //'   '//TRIM(str(conv_xflux,2)))
+    !   IF(nodal_method .EQ. 'poly')THEN
+    !     CALL comp_dtilde()
+    !     CALL build_amatrix(amat)
+    !   ENDIF
 
-      IF ((conv_xflux < tol_xflux) .AND. (conv_xkeff < tol_xkeff)) EXIT
+    !   IF ((conv_xflux < tol_xflux) .AND. (conv_xkeff < tol_xkeff)) EXIT
 
-    ENDDO ! iter = 1,tol_max_iter
+    ! ENDDO ! iter = 1,tol_max_iter
 
-    DEALLOCATE(amat, flux_old, bvec)
+    ! DEALLOCATE(amat, flux_old, bvec)
 
-    CALL print_log('ITERATIONS FINISHED')
-    CALL print_log('XKEFF = '//str(xkeff,16,'F'))
+    ! CALL print_log('ITERATIONS FINISHED')
+    ! CALL print_log('XKEFF = '//str(xkeff,16,'F'))
 
   ENDSUBROUTINE solver
 
   !amatrix builder
   SUBROUTINE build_amatrix(amatrix)
     REAL(kr8), INTENT(OUT) :: amatrix(:,:,:)
-    INTEGER(ki4) :: g,j,i,cell_idx
+    ! INTEGER(ki4) :: g,j,i,cell_idx
 
-    ! (1   , 2   , 3    , 4     , 5   )
-    ! (diag, left, right, below, above)
-    ! (diag, left, right, down , up   )
-    ! (diag, west, east , south, north)
+    ! ! (1   , 2   , 3    , 4     , 5   )
+    ! ! (diag, left, right, below, above)
+    ! ! (diag, left, right, down , up   )
+    ! ! (diag, west, east , south, north)
 
-    amatrix=0.0D0
-    DO j=1,core_y_size
-      DO i=1,core_x_size
-        cell_idx=calc_idx(i,j)
-        DO g=1,num_eg
-          !total xs term for the base of the A matrix diagonal
-          amatrix(1,cell_idx,g)=assm_xs(assm_map(i,j))%sigma_r(g)
-          !left term
-          IF(i .NE. 1)THEN
-            amatrix(1,cell_idx,g)=amatrix(1,cell_idx,g)&
-              +2.0D0*(h_x(i)/assm_xs(assm_map(i,j))%D(g)&
-              +h_x(i-1)/assm_xs(assm_map(i-1,j))%D(g))**(-1)/h_x(i)-dtilde_x(i,j,g)/h_x(i)
-            amatrix(2,cell_idx,g)=amatrix(2,cell_idx,g)&
-              -2.0D0*(h_x(i)/assm_xs(assm_map(i,j))%D(g)&
-              +h_x(i-1)/assm_xs(assm_map(i-1,j))%D(g))**(-1)/h_x(i)-dtilde_x(i,j,g)/h_x(i)
-          ELSE
-            !boundary condition specified by the dtilde factor computation in the polynomial portion
-            amatrix(1,cell_idx,g)=amatrix(1,cell_idx,g)+dtilde_x(i,j,g)/h_x(i)
-          ENDIF
-          !right term
-          IF(i .NE. core_x_size)THEN
-            amatrix(1,cell_idx,g)=amatrix(1,cell_idx,g)&
-              +2.0D0*(h_x(i)/assm_xs(assm_map(i,j))%D(g)&
-              +h_x(i+1)/assm_xs(assm_map(i+1,j))%D(g))**(-1)/h_x(i)+dtilde_x(i+1,j,g)/h_x(i)
-            amatrix(3,cell_idx,g)=amatrix(3,cell_idx,g)&
-              -2.0D0*(h_x(i)/assm_xs(assm_map(i,j))%D(g)&
-              +h_x(i+1)/assm_xs(assm_map(i+1,j))%D(g))**(-1)/h_x(i)+dtilde_x(i+1,j,g)/h_x(i)
-          ELSE
-            !boundary condition specified by the dtilde factor computation in the polynomial portion
-            amatrix(1,cell_idx,g)=amatrix(1,cell_idx,g)+dtilde_x(i+1,j,g)/h_x(i)
-          ENDIF
-          !below term
-          IF(j .NE. 1)THEN
-            amatrix(1,cell_idx,g)=amatrix(1,cell_idx,g)&
-              +2.0D0*(h_y(j)/assm_xs(assm_map(i,j))%D(g)&
-              +h_y(j-1)/assm_xs(assm_map(i,j-1))%D(g))**(-1)/h_y(j)-dtilde_y(i,j,g)/h_y(j)
-            amatrix(4,cell_idx,g)=amatrix(4,cell_idx,g)&
-              -2.0D0*(h_y(j)/assm_xs(assm_map(i,j))%D(g)&
-              +h_y(j-1)/assm_xs(assm_map(i,j-1))%D(g))**(-1)/h_y(j)-dtilde_y(i,j,g)/h_y(j)
-          ELSE
-            !boundary condition specified by the dtilde factor computation in the polynomial portion
-            amatrix(1,cell_idx,g)=amatrix(1,cell_idx,g)+dtilde_y(i,j,g)/h_y(j)
-          ENDIF
-          !above term
-          IF(j .NE. core_y_size)THEN
-            amatrix(1,cell_idx,g)=amatrix(1,cell_idx,g)&
-              +2.0D0*(h_y(j)/assm_xs(assm_map(i,j))%D(g)&
-              +h_y(j+1)/assm_xs(assm_map(i,j+1))%D(g))**(-1)/h_y(j)+dtilde_y(i,j+1,g)/h_y(j)
-            amatrix(5,cell_idx,g)=amatrix(5,cell_idx,g)&
-              -2.0D0*(h_y(j)/assm_xs(assm_map(i,j))%D(g)&
-              +h_y(j+1)/assm_xs(assm_map(i,j+1))%D(g))**(-1)/h_y(j)+dtilde_y(i,j+1,g)/h_y(j)
-          ELSE
-            !boundary condition specified by the dtilde factor computation in the polynomial portion
-            amatrix(1,cell_idx,g)=amatrix(1,cell_idx,g)+dtilde_y(i,j+1,g)/h_y(j)
-          ENDIF
-        ENDDO
-      ENDDO
-    ENDDO
+    ! amatrix=0.0D0
+    ! DO j=1,core_y_size
+    !   DO i=1,core_x_size
+    !     cell_idx=calc_idx(i,j)
+    !     DO g=1,num_eg
+    !       !total xs term for the base of the A matrix diagonal
+    !       amatrix(1,cell_idx,g)=assm_xs(assm_map(i,j))%sigma_r(g)
+    !       !left term
+    !       IF(i .NE. 1)THEN
+    !         amatrix(1,cell_idx,g)=amatrix(1,cell_idx,g)&
+    !           +2.0D0*(h_x(i)/assm_xs(assm_map(i,j))%D(g)&
+    !           +h_x(i-1)/assm_xs(assm_map(i-1,j))%D(g))**(-1)/h_x(i)-dtilde_x(i,j,g)/h_x(i)
+    !         amatrix(2,cell_idx,g)=amatrix(2,cell_idx,g)&
+    !           -2.0D0*(h_x(i)/assm_xs(assm_map(i,j))%D(g)&
+    !           +h_x(i-1)/assm_xs(assm_map(i-1,j))%D(g))**(-1)/h_x(i)-dtilde_x(i,j,g)/h_x(i)
+    !       ELSE
+    !         !boundary condition specified by the dtilde factor computation in the polynomial portion
+    !         amatrix(1,cell_idx,g)=amatrix(1,cell_idx,g)+dtilde_x(i,j,g)/h_x(i)
+    !       ENDIF
+    !       !right term
+    !       IF(i .NE. core_x_size)THEN
+    !         amatrix(1,cell_idx,g)=amatrix(1,cell_idx,g)&
+    !           +2.0D0*(h_x(i)/assm_xs(assm_map(i,j))%D(g)&
+    !           +h_x(i+1)/assm_xs(assm_map(i+1,j))%D(g))**(-1)/h_x(i)+dtilde_x(i+1,j,g)/h_x(i)
+    !         amatrix(3,cell_idx,g)=amatrix(3,cell_idx,g)&
+    !           -2.0D0*(h_x(i)/assm_xs(assm_map(i,j))%D(g)&
+    !           +h_x(i+1)/assm_xs(assm_map(i+1,j))%D(g))**(-1)/h_x(i)+dtilde_x(i+1,j,g)/h_x(i)
+    !       ELSE
+    !         !boundary condition specified by the dtilde factor computation in the polynomial portion
+    !         amatrix(1,cell_idx,g)=amatrix(1,cell_idx,g)+dtilde_x(i+1,j,g)/h_x(i)
+    !       ENDIF
+    !       !below term
+    !       IF(j .NE. 1)THEN
+    !         amatrix(1,cell_idx,g)=amatrix(1,cell_idx,g)&
+    !           +2.0D0*(h_y(j)/assm_xs(assm_map(i,j))%D(g)&
+    !           +h_y(j-1)/assm_xs(assm_map(i,j-1))%D(g))**(-1)/h_y(j)-dtilde_y(i,j,g)/h_y(j)
+    !         amatrix(4,cell_idx,g)=amatrix(4,cell_idx,g)&
+    !           -2.0D0*(h_y(j)/assm_xs(assm_map(i,j))%D(g)&
+    !           +h_y(j-1)/assm_xs(assm_map(i,j-1))%D(g))**(-1)/h_y(j)-dtilde_y(i,j,g)/h_y(j)
+    !       ELSE
+    !         !boundary condition specified by the dtilde factor computation in the polynomial portion
+    !         amatrix(1,cell_idx,g)=amatrix(1,cell_idx,g)+dtilde_y(i,j,g)/h_y(j)
+    !       ENDIF
+    !       !above term
+    !       IF(j .NE. core_y_size)THEN
+    !         amatrix(1,cell_idx,g)=amatrix(1,cell_idx,g)&
+    !           +2.0D0*(h_y(j)/assm_xs(assm_map(i,j))%D(g)&
+    !           +h_y(j+1)/assm_xs(assm_map(i,j+1))%D(g))**(-1)/h_y(j)+dtilde_y(i,j+1,g)/h_y(j)
+    !         amatrix(5,cell_idx,g)=amatrix(5,cell_idx,g)&
+    !           -2.0D0*(h_y(j)/assm_xs(assm_map(i,j))%D(g)&
+    !           +h_y(j+1)/assm_xs(assm_map(i,j+1))%D(g))**(-1)/h_y(j)+dtilde_y(i,j+1,g)/h_y(j)
+    !       ELSE
+    !         !boundary condition specified by the dtilde factor computation in the polynomial portion
+    !         amatrix(1,cell_idx,g)=amatrix(1,cell_idx,g)+dtilde_y(i,j+1,g)/h_y(j)
+    !       ENDIF
+    !     ENDDO
+    !   ENDDO
+    ! ENDDO
   ENDSUBROUTINE build_amatrix
 
   SUBROUTINE stripe_to_dense(stripe, dense)
-    USE globals, ONLY : num_eg, core_x_size, core_y_size
     REAL(kr8), INTENT(IN)  :: stripe(:,:)
     REAL(kr8), INTENT(OUT) :: dense(:,:)
 
-    INTEGER :: i, j
-    INTEGER :: cell_idx, neigh_idx
+    ! INTEGER :: i, j
+    ! INTEGER :: cell_idx, neigh_idx
 
-    dense = 0d0
+    ! dense = 0d0
 
-    DO j = 1,core_y_size
-      DO i = 1,core_x_size
+    ! DO j = 1,core_y_size
+    !   DO i = 1,core_x_size
 
-        cell_idx=calc_idx(i,j)
+    !     cell_idx=calc_idx(i,j)
 
-        ! self
-        dense(cell_idx,cell_idx) = stripe(1,cell_idx)
+    !     ! self
+    !     dense(cell_idx,cell_idx) = stripe(1,cell_idx)
 
-        ! west
-        IF (i .NE. 1) THEN
-          neigh_idx=calc_idx(i-1,j)
-          dense(cell_idx,neigh_idx) = stripe(2,cell_idx)
-        ENDIF
+    !     ! west
+    !     IF (i .NE. 1) THEN
+    !       neigh_idx=calc_idx(i-1,j)
+    !       dense(cell_idx,neigh_idx) = stripe(2,cell_idx)
+    !     ENDIF
 
-        ! east
-        IF (i .NE. core_x_size) THEN
-          neigh_idx=calc_idx(i+1,j)
-          dense(cell_idx,neigh_idx) = stripe(3,cell_idx)
-        ENDIF
+    !     ! east
+    !     IF (i .NE. core_x_size) THEN
+    !       neigh_idx=calc_idx(i+1,j)
+    !       dense(cell_idx,neigh_idx) = stripe(3,cell_idx)
+    !     ENDIF
 
-        ! south
-        IF (j .NE. 1) THEN
-          neigh_idx=calc_idx(i,j-1)
-          dense(cell_idx,neigh_idx) = stripe(4,cell_idx)
-        ENDIF
+    !     ! south
+    !     IF (j .NE. 1) THEN
+    !       neigh_idx=calc_idx(i,j-1)
+    !       dense(cell_idx,neigh_idx) = stripe(4,cell_idx)
+    !     ENDIF
 
-        ! north
-        IF (j .NE. core_y_size) THEN
-          neigh_idx=calc_idx(i,j+1)
-          dense(cell_idx,neigh_idx) = stripe(5,cell_idx)
-        ENDIF
+    !     ! north
+    !     IF (j .NE. core_y_size) THEN
+    !       neigh_idx=calc_idx(i,j+1)
+    !       dense(cell_idx,neigh_idx) = stripe(5,cell_idx)
+    !     ENDIF
 
-      ENDDO ! i = 1,core_x_size
-    ENDDO ! j = 1,core_y_size
+    !   ENDDO ! i = 1,core_x_size
+    ! ENDDO ! j = 1,core_y_size
 
-    RETURN
+    ! RETURN
   ENDSUBROUTINE stripe_to_dense
 
   ! solve inner linear system of equations (allows switching solver)
   SUBROUTINE inner_solve(method, rank, tol_inner_x, tol_inner_maxit, &
                          amat, bvec, flux)
-    USE globals, ONLY : num_eg, core_x_size, core_y_size
     CHARACTER(*), INTENT(IN)    :: method
     INTEGER,      INTENT(IN)    :: rank
     REAL(kr8),    INTENT(IN)    :: tol_inner_x
@@ -427,208 +429,208 @@ CONTAINS
     REAL(kr8),    INTENT(INOUT) :: flux(:,:)
 
     ! for dgesv
-    REAL(kr8), ALLOCATABLE :: atemp(:,:)
-    INTEGER(kr4), ALLOCATABLE :: ipiv(:)
-    INTEGER :: ierr
-    INTEGER :: cell_idx
-    INTEGER :: i, j
+    ! REAL(kr8), ALLOCATABLE :: atemp(:,:)
+    ! INTEGER(kr4), ALLOCATABLE :: ipiv(:)
+    ! INTEGER :: ierr
+    ! INTEGER :: cell_idx
+    ! INTEGER :: i, j
 
-    SELECT CASE (method)
-      CASE ('dgesv')
-        ALLOCATE(atemp(rank,rank))
-        ALLOCATE(ipiv(rank))
-        call stripe_to_dense(amat, atemp)
-        CALL DGESV(rank,1,atemp,rank,ipiv,bvec,rank,ierr)
-        IF(ierr .NE. 0)CALL fatal_error('DGESV failed')
-        !assign xflux to the new bvec
-        DO j=1,core_y_size
-          DO i=1,core_x_size
-            cell_idx=calc_idx(i,j)
-            flux(i,j)=MAX(bvec(cell_idx),0d0)
-          ENDDO
-        ENDDO
-        DEALLOCATE(atemp, ipiv)
-      CASE ('sor')
-        ! TODO set omega better than this
-        CALL sor(amat, bvec, flux, rank, 1.2d0, tol_inner_x, tol_inner_maxit)
-      CASE DEFAULT
-        call fatal_error('selected inner_solve method not implemented')
-    ENDSELECT
+    ! SELECT CASE (method)
+    !   CASE ('dgesv')
+    !     ALLOCATE(atemp(rank,rank))
+    !     ALLOCATE(ipiv(rank))
+    !     call stripe_to_dense(amat, atemp)
+    !     CALL DGESV(rank,1,atemp,rank,ipiv,bvec,rank,ierr)
+    !     IF(ierr .NE. 0)CALL fatal_error('DGESV failed')
+    !     !assign xflux to the new bvec
+    !     DO j=1,core_y_size
+    !       DO i=1,core_x_size
+    !         cell_idx=calc_idx(i,j)
+    !         flux(i,j)=MAX(bvec(cell_idx),0d0)
+    !       ENDDO
+    !     ENDDO
+    !     DEALLOCATE(atemp, ipiv)
+    !   CASE ('sor')
+    !     ! TODO set omega better than this
+    !     CALL sor(amat, bvec, flux, rank, 1.2d0, tol_inner_x, tol_inner_maxit)
+    !   CASE DEFAULT
+    !     call fatal_error('selected inner_solve method not implemented')
+    ! ENDSELECT
 
-    RETURN
+    ! RETURN
   ENDSUBROUTINE inner_solve
 
   !bvector builder for current flux
   SUBROUTINE build_bvec(bvec)
     REAL(kr8), INTENT(OUT) :: bvec(:,:)
-    INTEGER(ki4) :: i,j,g,gp,cell_idx,loc_id
-    REAL(kr8) :: fiss_src
-    bvec=0.0D0
-    DO j=1,core_y_size
-      DO i=1,core_x_size
-        cell_idx=calc_idx(i,j)
-        !compute fission source for this cell
-        loc_id=assm_map(i,j)
-        fiss_src=0.0D0
-        DO gp=1,num_eg
-          fiss_src=fiss_src+xflux(i,j,gp)*assm_xs(loc_id)%nusigma_f(gp)
-        ENDDO
-        DO g=1,num_eg
-          !set bvec to fission source
-          bvec(cell_idx,g)=fiss_src*assm_xs(loc_id)%chi(g)/xkeff
-          !and add up-scattering source
-          DO gp=g+1,num_eg
-            bvec(cell_idx,g)=bvec(cell_idx,g)+xflux(i,j,gp)*assm_xs(loc_id)%sigma_scat(g,gp)
-          ENDDO
-        ENDDO
-      ENDDO
-    ENDDO
+    ! INTEGER(ki4) :: i,j,g,gp,cell_idx,loc_id
+    ! REAL(kr8) :: fiss_src
+    ! bvec=0.0D0
+    ! DO j=1,core_y_size
+    !   DO i=1,core_x_size
+    !     cell_idx=calc_idx(i,j)
+    !     !compute fission source for this cell
+    !     loc_id=assm_map(i,j)
+    !     fiss_src=0.0D0
+    !     DO gp=1,num_eg
+    !       fiss_src=fiss_src+xflux(i,j,gp)*assm_xs(loc_id)%nusigma_f(gp)
+    !     ENDDO
+    !     DO g=1,num_eg
+    !       !set bvec to fission source
+    !       bvec(cell_idx,g)=fiss_src*assm_xs(loc_id)%chi(g)/xkeff
+    !       !and add up-scattering source
+    !       DO gp=g+1,num_eg
+    !         bvec(cell_idx,g)=bvec(cell_idx,g)+xflux(i,j,gp)*assm_xs(loc_id)%sigma_scat(g,gp)
+    !       ENDDO
+    !     ENDDO
+    !   ENDDO
+    ! ENDDO
   ENDSUBROUTINE build_bvec
 
   !add downscatter from the just solved group
   SUBROUTINE add_downscatter(bvec,gin)
     REAL(kr8), INTENT(INOUT) :: bvec(:,:)
     INTEGER(ki4),INTENT(IN) :: gin
-    INTEGER(ki4) :: i,j,g,cell_idx,loc_id
-    DO j=1,core_y_size
-      DO i=1,core_x_size
-        cell_idx=calc_idx(i,j)
-        loc_id=assm_map(i,j)
-        DO g=gin+1,num_eg
-          !add down-scattering source
-          bvec(cell_idx,g)=bvec(cell_idx,g)+xflux(i,j,gin)*assm_xs(loc_id)%sigma_scat(g,gin)
-        ENDDO
-      ENDDO
-    ENDDO
+    ! INTEGER(ki4) :: i,j,g,cell_idx,loc_id
+    ! DO j=1,core_y_size
+    !   DO i=1,core_x_size
+    !     cell_idx=calc_idx(i,j)
+    !     loc_id=assm_map(i,j)
+    !     DO g=gin+1,num_eg
+    !       !add down-scattering source
+    !       bvec(cell_idx,g)=bvec(cell_idx,g)+xflux(i,j,gin)*assm_xs(loc_id)%sigma_scat(g,gin)
+    !     ENDDO
+    !   ENDDO
+    ! ENDDO
   ENDSUBROUTINE add_downscatter
 
   !fission source calculator
   SUBROUTINE calc_fiss_src_sum(fiss_src)
     REAL(kr8), INTENT(OUT) :: fiss_src
-    INTEGER(ki4) :: i,j,gp,loc_id
-    fiss_src=0.0D0
-    DO gp=1,num_eg
-      DO j=1,core_y_size
-        DO i=1,core_x_size
-          loc_id=assm_map(i,j)
-          fiss_src=fiss_src+xflux(i,j,gp)*assm_xs(loc_id)%nusigma_f(gp)
-        ENDDO ! i = 1,core_x_size
-      ENDDO ! j = 1,core_y_size
-    ENDDO ! gp = 1,num_eg
+    ! INTEGER(ki4) :: i,j,gp,loc_id
+    ! fiss_src=0.0D0
+    ! DO gp=1,num_eg
+    !   DO j=1,core_y_size
+    !     DO i=1,core_x_size
+    !       loc_id=assm_map(i,j)
+    !       fiss_src=fiss_src+xflux(i,j,gp)*assm_xs(loc_id)%nusigma_f(gp)
+    !     ENDDO ! i = 1,core_x_size
+    !   ENDDO ! j = 1,core_y_size
+    ! ENDDO ! gp = 1,num_eg
   ENDSUBROUTINE calc_fiss_src_sum
 
   SUBROUTINE comp_dtilde()
-    REAL(kr8) :: s_bar_x(core_x_size,core_y_size,num_eg),s_bar_y(core_x_size,core_y_size,num_eg)
-    CALL comp_s(s_bar_x,s_bar_y)
-    STOP 'comp_dtilde not yet complete'
+    ! REAL(kr8) :: s_bar_x(core_x_size,core_y_size,num_eg),s_bar_y(core_x_size,core_y_size,num_eg)
+    ! CALL comp_s(s_bar_x,s_bar_y)
+    ! STOP 'comp_dtilde not yet complete'
   ENDSUBROUTINE comp_dtilde
 
   SUBROUTINE comp_s(s_bar_x,s_bar_y)
     REAL(kr8),INTENT(OUT) :: s_bar_x(:,:,:),s_bar_y(:,:,:)
-    REAL(kr8) :: j_x(core_x_size+1,core_y_size,num_eg),j_y(core_x_size,core_y_size+1,num_eg)
-    REAL(kr8) :: l_bar_x(core_x_size,core_y_size,num_eg),l_bar_y(core_x_size,core_y_size,num_eg)
-    INTEGER :: i,j,g
+    ! REAL(kr8) :: j_x(core_x_size+1,core_y_size,num_eg),j_y(core_x_size,core_y_size+1,num_eg)
+    ! REAL(kr8) :: l_bar_x(core_x_size,core_y_size,num_eg),l_bar_y(core_x_size,core_y_size,num_eg)
+    ! INTEGER :: i,j,g
 
-    !compute x direction currents at each face
-    j_x=0.0D0
-    DO i=1,core_x_size+1
-      DO j=1,core_y_size
-        DO g=1,num_eg
-          IF(i .EQ. 1)THEN
-            j_x(i,j,g)=-dtilde_x(i,j,g)*xflux(i,j,g)
-          ELSEIF(i .EQ. core_x_size+1)THEN
-            j_x(i,j,g)=dtilde_x(i,j,g)*xflux(i-1,j,g)
-          ELSE !not a boundary
-            j_x(i,j,g)=2.0D0*(h_x(i-1)/assm_xs(assm_map(i-1,j))%D(g)&
-              +h_x(i)/assm_xs(assm_map(i,j))%D(g))*(xflux(i-1,j,g)-xflux(i,j,g))&
-              +dtilde_x(i,j,g)*(xflux(i-1,j,g)+xflux(i,j,g))
-          ENDIF
-        ENDDO
-      ENDDO
-    ENDDO
-    !compute y direction currents at each face
-    j_y=0.0D0
-    DO i=1,core_x_size
-      DO j=1,core_y_size+1
-        DO g=1,num_eg
-          IF(j .EQ. 1)THEN
-            j_y(i,j,g)=-dtilde_y(i,j,g)*xflux(i,j,g)
-          ELSEIF(j .EQ. core_y_size+1)THEN
-            j_y(i,j,g)=dtilde_y(i,j,g)*xflux(i,j-1,g)
-          ELSE !not a boundary
-            j_y(i,j,g)=2.0D0*(h_y(j-1)/assm_xs(assm_map(i,j-1))%D(g)&
-              +h_y(j)/assm_xs(assm_map(i,j))%D(g))*(xflux(i,j-1,g)-xflux(i,j,g))&
-              +dtilde_y(i,j,g)*(xflux(i,j-1,g)+xflux(i,j,g))
-          ENDIF
-        ENDDO
-      ENDDO
-    ENDDO
+    ! !compute x direction currents at each face
+    ! j_x=0.0D0
+    ! DO i=1,core_x_size+1
+    !   DO j=1,core_y_size
+    !     DO g=1,num_eg
+    !       IF(i .EQ. 1)THEN
+    !         j_x(i,j,g)=-dtilde_x(i,j,g)*xflux(i,j,g)
+    !       ELSEIF(i .EQ. core_x_size+1)THEN
+    !         j_x(i,j,g)=dtilde_x(i,j,g)*xflux(i-1,j,g)
+    !       ELSE !not a boundary
+    !         j_x(i,j,g)=2.0D0*(h_x(i-1)/assm_xs(assm_map(i-1,j))%D(g)&
+    !           +h_x(i)/assm_xs(assm_map(i,j))%D(g))*(xflux(i-1,j,g)-xflux(i,j,g))&
+    !           +dtilde_x(i,j,g)*(xflux(i-1,j,g)+xflux(i,j,g))
+    !       ENDIF
+    !     ENDDO
+    !   ENDDO
+    ! ENDDO
+    ! !compute y direction currents at each face
+    ! j_y=0.0D0
+    ! DO i=1,core_x_size
+    !   DO j=1,core_y_size+1
+    !     DO g=1,num_eg
+    !       IF(j .EQ. 1)THEN
+    !         j_y(i,j,g)=-dtilde_y(i,j,g)*xflux(i,j,g)
+    !       ELSEIF(j .EQ. core_y_size+1)THEN
+    !         j_y(i,j,g)=dtilde_y(i,j,g)*xflux(i,j-1,g)
+    !       ELSE !not a boundary
+    !         j_y(i,j,g)=2.0D0*(h_y(j-1)/assm_xs(assm_map(i,j-1))%D(g)&
+    !           +h_y(j)/assm_xs(assm_map(i,j))%D(g))*(xflux(i,j-1,g)-xflux(i,j,g))&
+    !           +dtilde_y(i,j,g)*(xflux(i,j-1,g)+xflux(i,j,g))
+    !       ENDIF
+    !     ENDDO
+    !   ENDDO
+    ! ENDDO
 
-    !!x direction currents
-    !write(*,*)'j_x'
-    !DO j=1,core_y_size
-    !  WRITE(*,'(10000ES16.8)')j_x(:,j,1)
-    !ENDDO
-    !!y direction currents
-    !write(*,*)'j_y'
-    !DO j=1,core_y_size+1
-    !  WRITE(*,'(10000ES16.8)')j_y(:,j,1)
-    !ENDDO
+    ! !!x direction currents
+    ! !write(*,*)'j_x'
+    ! !DO j=1,core_y_size
+    ! !  WRITE(*,'(10000ES16.8)')j_x(:,j,1)
+    ! !ENDDO
+    ! !!y direction currents
+    ! !write(*,*)'j_y'
+    ! !DO j=1,core_y_size+1
+    ! !  WRITE(*,'(10000ES16.8)')j_y(:,j,1)
+    ! !ENDDO
 
-    !compute l_bar_x values
-    DO i=1,core_x_size
-      DO j=1,core_y_size
-        DO g=1,num_eg
-          l_bar_x(i,j,g)=j_x(i+1,j,g)-j_x(i,j,g)
-        ENDDO
-      ENDDO
-    ENDDO
-    !compute l_bar_y values
-    DO i=1,core_x_size
-      DO j=1,core_y_size
-        DO g=1,num_eg
-          l_bar_y(i,j,g)=j_y(i,j+1,g)-j_y(i,j,g)
-        ENDDO
-      ENDDO
-    ENDDO
+    ! !compute l_bar_x values
+    ! DO i=1,core_x_size
+    !   DO j=1,core_y_size
+    !     DO g=1,num_eg
+    !       l_bar_x(i,j,g)=j_x(i+1,j,g)-j_x(i,j,g)
+    !     ENDDO
+    !   ENDDO
+    ! ENDDO
+    ! !compute l_bar_y values
+    ! DO i=1,core_x_size
+    !   DO j=1,core_y_size
+    !     DO g=1,num_eg
+    !       l_bar_y(i,j,g)=j_y(i,j+1,g)-j_y(i,j,g)
+    !     ENDDO
+    !   ENDDO
+    ! ENDDO
 
-    !!x direction l
-    !write(*,*)'l_x'
-    !DO j=1,core_y_size
-    ! WRITE(*,'(10000ES16.8)')l_bar_x(:,j,1)
-    !ENDDO
-    !!y direction l
-    !write(*,*)'l_y'
-    !DO j=1,core_y_size
-    ! WRITE(*,'(10000ES16.8)')l_bar_y(:,j,1)
-    !ENDDO
+    ! !!x direction l
+    ! !write(*,*)'l_x'
+    ! !DO j=1,core_y_size
+    ! ! WRITE(*,'(10000ES16.8)')l_bar_x(:,j,1)
+    ! !ENDDO
+    ! !!y direction l
+    ! !write(*,*)'l_y'
+    ! !DO j=1,core_y_size
+    ! ! WRITE(*,'(10000ES16.8)')l_bar_y(:,j,1)
+    ! !ENDDO
 
-    !compute s_bar_x values
-    DO i=1,core_x_size
-      DO j=1,core_y_size
-        DO g=1,num_eg
-          s_bar_x(i,j,g)=l_bar_y(i,j,g)/h_y(j)
-        ENDDO
-      ENDDO
-    ENDDO
-    !compute s_bar_y values
-    DO i=1,core_x_size
-      DO j=1,core_y_size
-        DO g=1,num_eg
-          s_bar_y(i,j,g)=l_bar_x(i,j,g)/h_x(i)
-        ENDDO
-      ENDDO
-    ENDDO
+    ! !compute s_bar_x values
+    ! DO i=1,core_x_size
+    !   DO j=1,core_y_size
+    !     DO g=1,num_eg
+    !       s_bar_x(i,j,g)=l_bar_y(i,j,g)/h_y(j)
+    !     ENDDO
+    !   ENDDO
+    ! ENDDO
+    ! !compute s_bar_y values
+    ! DO i=1,core_x_size
+    !   DO j=1,core_y_size
+    !     DO g=1,num_eg
+    !       s_bar_y(i,j,g)=l_bar_x(i,j,g)/h_x(i)
+    !     ENDDO
+    !   ENDDO
+    ! ENDDO
 
-    !x direction l
-    write(*,*)'s_x'
-    DO j=1,core_y_size
-      WRITE(*,'(10000ES16.8)')s_bar_x(:,j,1)
-    ENDDO
-    !y direction l
-    write(*,*)'s_y'
-    DO j=1,core_y_size
-      WRITE(*,'(10000ES16.8)')s_bar_y(:,j,1)
-    ENDDO
+    ! !x direction l
+    ! write(*,*)'s_x'
+    ! DO j=1,core_y_size
+    !   WRITE(*,'(10000ES16.8)')s_bar_x(:,j,1)
+    ! ENDDO
+    ! !y direction l
+    ! write(*,*)'s_y'
+    ! DO j=1,core_y_size
+    !   WRITE(*,'(10000ES16.8)')s_bar_y(:,j,1)
+    ! ENDDO
   ENDSUBROUTINE comp_s
 ENDMODULE solvers_module
