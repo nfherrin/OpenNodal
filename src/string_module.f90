@@ -196,10 +196,9 @@ CONTAINS
 !> @param k - integer to convert
 !> @param inform - number of integer places to use, optional defaults to I0 (no additional spacing)
 !>
-  FUNCTION str_int(k,inform)
+  CHARACTER(64) FUNCTION str_int(k,inform)
     INTEGER(ki4), INTENT(IN) :: k
     INTEGER, INTENT(IN), OPTIONAL :: inform
-    CHARACTER(64) :: str_int
     CHARACTER(64) :: format_char
 
     WRITE (str_int, *) k
@@ -217,11 +216,10 @@ CONTAINS
 !> @param inform - format of the double print. 'es' is scientific, 'f' is decimal.
 !>    Scientific is default
 !>
-  FUNCTION str_real(val,decs,inform)
+  CHARACTER(64) FUNCTION str_real(val,decs,inform)
     REAL(kr8), INTENT(IN) :: val
     INTEGER(ki4), INTENT(IN), OPTIONAL :: decs
     CHARACTER(*), INTENT(IN), OPTIONAL :: inform
-    CHARACTER(64) :: str_real
     CHARACTER(64) :: format_char
     CHARACTER(2) :: real_form
     INTEGER(ki4) :: ndecs
@@ -240,9 +238,8 @@ CONTAINS
 !> @brief This function makes a string lowercase
 !> @param str - string to make lowercase
 !>
-  FUNCTION lowercase(str)
+  CHARACTER(len_trim(str)) FUNCTION lowercase(str)
     CHARACTER(*), INTENT(IN):: str
-    CHARACTER(len_trim(str)):: lowercase
 
     INTEGER(ki4) :: i,iav,ilen,ioffset,iqc,iquote
 
@@ -274,9 +271,8 @@ CONTAINS
 !> @brief This function makes a string uppercase
 !> @param str - string to make uppercase
 !>
-  FUNCTION uppercase(str)
+  CHARACTER(len_trim(str)) FUNCTION uppercase(str)
     CHARACTER(*), INTENT(IN):: str
-    CHARACTER(len_trim(str)):: uppercase
 
     INTEGER(ki4) :: i,iav,ilen,ioffset,iqc,iquote
 

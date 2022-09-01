@@ -15,6 +15,12 @@ MODULE solvers_module
 
 CONTAINS
 
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine computes the cell id based on the 2D map
+!> @param i - x location index
+!> @param j - y location index
+!> @param core_x_size - core size in the x direction
+!>
   INTEGER(ki4) PURE FUNCTION calc_idx(i, j, core_x_size)
     INTEGER, INTENT(IN) :: i, j, core_x_size
     calc_idx=(j-1)*core_x_size+i
@@ -22,7 +28,26 @@ CONTAINS
   ENDFUNCTION calc_idx
 
 !---------------------------------------------------------------------------------------------------
-!> @brief This subroutine solves the nodal problem
+!> @brief This subroutine initializes values for the nodal solver (i.e. BC/splitting stuff)
+!> @param core_x_size - core size in the x direction
+!> @param core_y_size - core size in the y direction
+!> @param num_eg - number of energy groups
+!> @param assm_map - assembly map
+!> @param refl_mat - reflector material
+!> @param num_assm_reg - number of unique assemblies
+!> @param assm_xs - assembly level cross sections
+!> @param ax_buckle - axial buckling for 2D problems
+!> @param h_x - node widths in the x direction
+!> @param h_y - node widths in the y direction
+!> @param nsplit - nsplit value, for decomposing nodes into nsplit number of sub-nodes
+!> @param assm_pitch - assembly pitch
+!> @param xkeff - eigenvalue
+!> @param xflux - scalar flux
+!> @param dtilde_x - current correction cross section used in the x direction
+!> @param dtilde_y - current correction cross section used in the y direction
+!> @param bc_opt - boundary condition option
+!> @param albedos - albedo boundary conditions
+!> @param prob_sym - problem symmetry
 !>
   SUBROUTINE solver_init(core_x_size,core_y_size,num_eg,assm_map,refl_mat,num_assm_reg,assm_xs, &
                           ax_buckle,h_x,h_y,nsplit,assm_pitch,xkeff,xflux,dtilde_x,dtilde_y,bc_opt, &
@@ -155,10 +180,13 @@ CONTAINS
 !> @brief This subroutine uses SOR to solve an Ax=b problem for x given A and b
 !> @param aa - A matrix
 !> @param b - RHS b vector
-!> @param x - x solution vector
-!> @param omega -
-!> @param tol_inner_x -
-!> @param tol_inner_maxit -
+!> @param xflux - scalar flux
+!> @param rank - system size
+!> @param omega - Over-relaxation factor
+!> @param tol_inner_x - Inner tolerance
+!> @param tol_inner_maxit - Number of max iterations
+!> @param core_x_size - core size in the x direction
+!> @param core_y_size - core size in the y direction
 !>
   SUBROUTINE sor(aa, b, flux, rank, omega, tol_inner_x, tol_inner_maxit,core_x_size,core_y_size)
     IMPLICIT NONE
@@ -216,6 +244,21 @@ CONTAINS
 
 !---------------------------------------------------------------------------------------------------
 !> @brief This subroutine solves the nodal problem
+!> @param core_x_size - core size in the x direction
+!> @param core_y_size - core size in the y direction
+!> @param num_eg - number of energy groups
+!> @param tol_xflux - flux convergence tolerance
+!> @param tol_xkeff - keff convergence tolerance
+!> @param xflux - scalar flux
+!> @param xkeff - eigenvalue
+!> @param tol_max_iter - maximum number of iterations
+!> @param nodal_method - nodal method option
+!> @param assm_map - assembly map
+!> @param assm_xs - assembly level cross sections
+!> @param dtilde_x - current correction cross section used in the x direction
+!> @param dtilde_y - current correction cross section used in the y direction
+!> @param h_x - node widths in the x direction
+!> @param h_y - node widths in the y direction
 !>
   subroutine solver(core_x_size,core_y_size,num_eg,tol_xflux,tol_xkeff,xflux,xkeff,tol_max_iter, &
                     nodal_method,assm_map,assm_xs,dtilde_x,dtilde_y,h_x,h_y)
@@ -306,7 +349,19 @@ CONTAINS
 
   ENDSUBROUTINE solver
 
-  !amatrix builder
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine builds the amatrix for the CMFD problem
+!> @param amatrix - amatrix to build
+!> @param core_x_size - core size in the x direction
+!> @param core_y_size - core size in the y direction
+!> @param num_eg - number of energy groups
+!> @param assm_xs - assembly level cross sections
+!> @param assm_map - assembly map
+!> @param h_x - node widths in the x direction
+!> @param h_y - node widths in the y direction
+!> @param dtilde_x - current correction cross section used in the x direction
+!> @param dtilde_y - current correction cross section used in the y direction
+!>
   SUBROUTINE build_amatrix(amatrix,core_x_size,core_y_size,num_eg,assm_xs,assm_map,h_x,h_y,dtilde_x, &
                           dtilde_y)
     INTEGER(ki4), INTENT(IN) :: core_x_size,core_y_size,num_eg,assm_map(:,:)
@@ -381,6 +436,13 @@ CONTAINS
     ENDDO
   ENDSUBROUTINE build_amatrix
 
+!---------------------------------------------------------------------------------------------------
+!> @brief This converts a stripe represented amatrix to a dense amatrix
+!> @param stripe - stripe matrix to convert
+!> @param dense - dense matrix that is converted to
+!> @param core_x_size - core size in the x direction
+!> @param core_y_size - core size in the y direction
+!>
   SUBROUTINE stripe_to_dense(stripe, dense,core_x_size,core_y_size)
     REAL(kr8), INTENT(IN)  :: stripe(:,:)
     INTEGER(ki4) :: core_x_size,core_y_size
@@ -429,7 +491,18 @@ CONTAINS
     RETURN
   ENDSUBROUTINE stripe_to_dense
 
-  ! solve inner linear system of equations (allows switching solver)
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine solves inner linear system of equations (allows switching solvers)
+!> @param method - linear solver method to use
+!> @param rank - system size
+!> @param tol_inner_x - Inner tolerance
+!> @param tol_inner_maxit - Number of max iterations
+!> @param amat - A matrix
+!> @param bvec - RHS b vector
+!> @param flux - scalar flux
+!> @param core_x_size - core size in the x direction
+!> @param core_y_size - core size in the y direction
+!>
   SUBROUTINE inner_solve(method, rank, tol_inner_x, tol_inner_maxit, &
                          amat, bvec, flux,core_x_size,core_y_size)
     CHARACTER(*), INTENT(IN)    :: method
@@ -472,7 +545,17 @@ CONTAINS
     RETURN
   ENDSUBROUTINE inner_solve
 
-  !bvector builder for current flux
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine builds the bvector for current flux (sans downscattering)
+!> @param bvec - RHS b vector
+!> @param core_x_size - core size in the x direction
+!> @param core_y_size - core size in the y direction
+!> @param num_eg - number of energy groups
+!> @param assm_xs - assembly level cross sections
+!> @param xkeff - eigenvalue
+!> @param xflux - scalar flux
+!> @param assm_map - assembly map
+!>
   SUBROUTINE build_bvec(bvec,core_x_size,core_y_size,num_eg,assm_xs,xkeff,xflux,assm_map)
     REAL(kr8), INTENT(OUT) :: bvec(:,:)
     REAL(kr8), INTENT(IN) :: xkeff,xflux(:,:,:)
@@ -503,7 +586,17 @@ CONTAINS
     ENDDO
   ENDSUBROUTINE build_bvec
 
-  !add downscatter from the just solved group
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine adds downscatter from the just solved group to the bvector
+!> @param bvec - RHS b vector
+!> @param gin - group we are scattering from to get the added downscattering
+!> @param core_x_size - core size in the x direction
+!> @param core_y_size - core size in the y direction
+!> @param num_eg - number of energy groups
+!> @param assm_xs - assembly level cross sections
+!> @param assm_map - assembly map
+!> @param xflux - scalar flux
+!>
   SUBROUTINE add_downscatter(bvec,gin,core_x_size,core_y_size,num_eg,assm_xs,assm_map,xflux)
     REAL(kr8), INTENT(INOUT) :: bvec(:,:)
     REAL(kr8), INTENT(IN) :: xflux(:,:,:)
@@ -523,7 +616,15 @@ CONTAINS
     ENDDO
   ENDSUBROUTINE add_downscatter
 
-  !fission source calculator
+!---------------------------------------------------------------------------------------------------
+!> @brief This function calculates the fission source
+!> @param core_x_size - core size in the x direction
+!> @param core_y_size - core size in the y direction
+!> @param num_eg - number of energy groups
+!> @param assm_map - assembly map
+!> @param xflux - scalar flux
+!> @param assm_xs - assembly level cross sections
+!>
   REAL(kr8) FUNCTION calc_fiss_src_sum(core_x_size,core_y_size,num_eg,assm_map,xflux,assm_xs)
     REAL(kr8), INTENT(IN) :: xflux(:,:,:)
     INTEGER(ki4), INTENT(IN) :: core_x_size,core_y_size,num_eg,assm_map(:,:)
@@ -541,6 +642,19 @@ CONTAINS
     ENDDO ! gp = 1,num_eg
   ENDFUNCTION calc_fiss_src_sum
 
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine calculates dtilde
+!> @param core_x_size - core size in the x direction
+!> @param core_y_size - core size in the y direction
+!> @param num_eg - number of energy groups
+!> @param assm_xs - assembly level cross sections
+!> @param assm_map - assembly map
+!> @param xflux - scalar flux
+!> @param dtilde_x - current correction cross section used in the x direction
+!> @param dtilde_y - current correction cross section used in the y direction
+!> @param h_x - node widths in the x direction
+!> @param h_y - node widths in the y direction
+!>
   SUBROUTINE comp_dtilde(core_x_size,core_y_size,num_eg,assm_xs,assm_map,xflux,dtilde_x, &
                           dtilde_y,h_x,h_y)
     INTEGER, INTENT(IN) :: core_x_size,core_y_size,num_eg,assm_map(:,:)
@@ -554,6 +668,21 @@ CONTAINS
     STOP 'comp_dtilde not yet complete'
   ENDSUBROUTINE comp_dtilde
 
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine the sbar values
+!> @param s_bar_x - sbar in the x direction
+!> @param s_bar_y - sbar in the y direction
+!> @param core_x_size - core size in the x direction
+!> @param core_y_size - core size in the y direction
+!> @param num_eg - number of energy groups
+!> @param assm_xs - assembly level cross sections
+!> @param assm_map - assembly map
+!> @param xflux - scalar flux
+!> @param dtilde_x - current correction cross section used in the x direction
+!> @param dtilde_y - current correction cross section used in the y direction
+!> @param h_x - node widths in the x direction
+!> @param h_y - node widths in the y direction
+!>
   SUBROUTINE comp_s(s_bar_x,s_bar_y,core_x_size,core_y_size,num_eg,assm_xs,assm_map,xflux,dtilde_x, &
                     dtilde_y,h_x,h_y)
     INTEGER, INTENT(IN) :: core_x_size,core_y_size,num_eg,assm_map(:,:)

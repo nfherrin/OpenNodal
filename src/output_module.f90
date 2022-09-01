@@ -14,7 +14,19 @@ MODULE output_module
   INTEGER(ki4),PARAMETER :: out_unit=31
 CONTAINS
 
-  !output results
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine outputs all results
+!> @param xflux - scalar flux
+!> @param xkeff - eigenvalue
+!> @param core_x_size - core size in the x direction
+!> @param core_y_size - core size in the y direction
+!> @param nsplit - nsplit value, for decomposing nodes into nsplit number of sub-nodes
+!> @param num_eg - number of energy groups
+!> @param assm_xs - assembly level cross sections
+!> @param h_x - node widths in the x direction
+!> @param h_y - node widths in the y direction
+!> @param assm_map - assembly map
+!>
   SUBROUTINE output_results(xflux,xkeff,core_x_size,core_y_size,nsplit,num_eg,assm_xs,h_x,h_y,assm_map)
     INTEGER(ki4), INTENT(IN) :: core_x_size,core_y_size,nsplit,num_eg,assm_map(:,:)
     REAL(kr8), INTENT(IN) :: xflux(:,:,:),xkeff,h_x(:),h_y(:)
@@ -56,7 +68,17 @@ CONTAINS
     IF(check_for('gnuplot'))CALL plot_flux(num_eg,h_x,h_y)
   ENDSUBROUTINE output_results
 
-  !creates the flux csv output
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine creates the flux csv output
+!> @param core_x_size - core size in the x direction
+!> @param core_y_size - core size in the y direction
+!> @param num_eg - number of energy groups
+!> @param xflux - scalar flux
+!> @param h_x - node widths in the x direction
+!> @param h_y - node widths in the y direction
+!> @param assm_xs - assembly level cross sections
+!> @param assm_map - assembly map
+!>
   SUBROUTINE create_flux_csv(core_x_size,core_y_size,num_eg,xflux,h_x,h_y,assm_xs,assm_map)
     INTEGER(ki4), INTENT(IN) :: core_x_size,core_y_size,num_eg,assm_map(:,:)
     REAL(kr8), INTENT(IN) :: h_x(:),h_y(:),xflux(:,:,:)
@@ -110,7 +132,12 @@ CONTAINS
 
   ENDSUBROUTINE create_flux_csv
 
-  !plot the flux in the CSV files using gnuplot, like a real engineer...
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine plots the flux in the CSV files using gnuplot, like a real engineer...
+!> @param num_eg - number of energy groups
+!> @param h_x - node widths in the x direction
+!> @param h_y - node widths in the y direction
+!>
   SUBROUTINE plot_flux(num_eg,h_x,h_y)
     INTEGER(ki4), INTENT(IN) :: num_eg
     REAL(kr8), INTENT(IN) :: h_x(:),h_y(:)

@@ -12,7 +12,7 @@ PROGRAM opennodal
   USE, INTRINSIC :: ISO_FORTRAN_ENV
   IMPLICIT NONE
 
-  !> problem dimensions
+  !> problem dimension
   INTEGER(ki4) :: prob_dim=2
   !> core size, assumed square
   INTEGER(ki4) :: core_x_size=0,core_y_size=0
@@ -61,8 +61,10 @@ PROGRAM opennodal
   !read command line arguments (just input file for now
   CALL read_cmd_args()
 
+  !open the log file
   OPEN(UNIT=log_unit, FILE=TRIM(ADJUSTL(base_in))//'.log', STATUS="REPLACE", ACTION="WRITE")
 
+  !print the header
   CALL print_log('***************************** OpenNodal - Version 1 *****************************')
   CALL print_log('*********************************************************************************')
   CALL print_log('*********************************************************************************')
@@ -85,7 +87,7 @@ PROGRAM opennodal
                   albedos,num_eg,nsplit,tol_xkeff,tol_xflux,tol_max_iter,nodal_method,num_assm_reg, &
                   assm_xs,refl_mat,ax_buckle)
 
-  ! initialize memory
+  ! initialize memory and the solver
   ! this is done here to allow for multi-state runs in the future rather than
   ! initializing inside of the solver
   CALL solver_init(core_x_size,core_y_size,num_eg,assm_map,refl_mat,num_assm_reg,assm_xs,ax_buckle, &
@@ -95,6 +97,7 @@ PROGRAM opennodal
   CALL solver(core_x_size,core_y_size,num_eg,tol_xflux,tol_xkeff,xflux,xkeff,tol_max_iter, &
               nodal_method,assm_map,assm_xs,dtilde_x,dtilde_y,h_x,h_y)
 
+  !output the results
   CALL output_results(xflux,xkeff,core_x_size,core_y_size,nsplit,num_eg,assm_xs,h_x,h_y,assm_map)
 
 ENDPROGRAM opennodal

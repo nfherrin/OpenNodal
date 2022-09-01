@@ -12,11 +12,14 @@ CONTAINS
 
 !---------------------------------------------------------------------------------------------------
 !> @brief This subroutine edits the cross sections, calculating the kinf for each assembly
+!> @param assm_xs - assembly level cross sections
+!> @param num_assm_reg - number of unique assemblies (or at least, unique assembly IDs)
+!> @param num_eg - number of energy groups
 !>
   SUBROUTINE edit_xs(assm_xs,num_assm_reg,num_eg)
     TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
     INTEGER, INTENT(IN) :: num_assm_reg,num_eg
-
+    !local variables
     INTEGER(ki4) :: i
     REAL(kr8) :: flux_ratio, kinf
 

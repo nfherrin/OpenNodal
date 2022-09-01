@@ -33,11 +33,11 @@ MODULE input_module
   INTEGER(ki4) :: y_s=0                           !core_y_size
   REAL(kr8) :: a_p=0                              !assm_pitch
   CHARACTER(100) :: p_s='full'                    !prob_sym
-  INTEGER(ki4), ALLOCATABLE :: a_m(:,:)            !assm_map
+  INTEGER(ki4), ALLOCATABLE :: a_m(:,:)           !assm_map
   REAL(kr8), ALLOCATABLE :: d_x(:)                !h_x
   REAL(kr8), ALLOCATABLE :: d_y(:)                !h_y
   CHARACTER(100) :: b_o='vacuum'                  !bc_opt
-  REAL(kr8), ALLOCATABLE :: alb(:)                 !albedos
+  REAL(kr8), ALLOCATABLE :: alb(:)                !albedos
   INTEGER(ki4) :: n_g                             !num_eg
   INTEGER(ki4) :: ns=1                            !nsplit
   REAL(kr8) :: t_xk = 1d-6                        !tol_xkeff
@@ -45,7 +45,7 @@ MODULE input_module
   INTEGER(ki4) :: t_m_i = 100                     !tol_max_iter
   CHARACTER(100) :: n_m='fd'                      !nodal_method
   INTEGER(ki4) :: n_a_r=1                         !num_assm_reg
-  TYPE(macro_assm_xs_type), ALLOCATABLE :: a_x(:)  !assm_xs
+  TYPE(macro_assm_xs_type), ALLOCATABLE :: a_x(:) !assm_xs
   INTEGER(ki4) :: r_m=0                           !refl_mat
   REAL(kr8) :: a_b=0.0D0                          !ax_buckle
 
@@ -72,9 +72,11 @@ MODULE input_module
   !> actual blocks variables
   TYPE(blockType) :: blocks(num_blocks)
 
-  !> Explicitly defines the interface for an object method subroutine with word array argument
-  !> @param thisCard - The card we're retrieving data for
-  !> @param twords - The string from which the data is being retrieved
+!---------------------------------------------------------------------------------------------------
+!> Explicitly defines the interface for an object method subroutine with word array argument
+!> @param thisCard - The card we're retrieving data for
+!> @param twords - The string from which the data is being retrieved
+!>
   ABSTRACT INTERFACE
     SUBROUTINE prototype_wordarg(thisCard,twords)
       IMPORT :: cardType
@@ -84,6 +86,7 @@ MODULE input_module
   ENDINTERFACE
 
 CONTAINS
+
 !---------------------------------------------------------------------------------------------------
 !> @brief This subroutine reads in command line arguments
 !>
@@ -98,7 +101,27 @@ CONTAINS
   ENDSUBROUTINE read_cmd_args
 
 !---------------------------------------------------------------------------------------------------
-!> @brief This subroutine reads in all input files
+!> @brief This subroutine reads in all input files to get input data
+!> @param prob_dim - problem dimension
+!> @param core_x_size - core size in the x direction
+!> @param core_y_size - core size in the y direction
+!> @param assm_pitch - assembly pitch
+!> @param prob_sym - problem symmetry
+!> @param assm_map - assembly map
+!> @param h_x - node widths in the x direction
+!> @param h_y - node widths in the y direction
+!> @param bc_opt - boundary condition option
+!> @param albedos - albedo boundary conditions
+!> @param num_eg - number of energy groups
+!> @param nsplit - nsplit value, for decomposing nodes into nsplit number of sub-nodes
+!> @param tol_xkeff - keff convergence tolerance
+!> @param tol_xflux - flux convergence tolerance
+!> @param tol_max_iter - maximum number of iterations
+!> @param nodal_method - nodal method option
+!> @param num_assm_reg - number of unique assemblies
+!> @param assm_xs - assembly level cross sections
+!> @param refl_mat - reflector material
+!> @param ax_buckle - axial buckling for 2D problems
 !>
   SUBROUTINE read_files(prob_dim,core_x_size,core_y_size,assm_pitch,prob_sym,assm_map,h_x,h_y, &
                         bc_opt,albedos,num_eg,nsplit,tol_xkeff,tol_xflux,tol_max_iter,nodal_method, &
@@ -602,8 +625,6 @@ CONTAINS
 
   !---------------------------------------------------------------------------------------------------
   !> @brief Subroutine to read in the boundary conditions option
-  !> @param this_card - The card we're retrieving data for
-  !> @param wwords - The string from which the data is being retrieved
   !>
     SUBROUTINE get_bc(this_card,wwords)
       CLASS(cardType), INTENT(INOUT) :: this_card

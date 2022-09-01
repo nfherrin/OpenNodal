@@ -44,10 +44,12 @@ CONTAINS
     ENDIF
   ENDSUBROUTINE print_log
 
-  !checks for software
-  FUNCTION check_for(software_name)
+!---------------------------------------------------------------------------------------------------
+!> @brief Checks if software is installed
+!> @param software_name - Name of software to check for
+!>
+  LOGICAL FUNCTION check_for(software_name)
     CHARACTER(*), INTENT(IN) :: software_name
-    LOGICAL :: check_for
     INTEGER(ki4) :: iexit
     CALL EXECUTE_COMMAND_LINE('which '//TRIM(software_name)//' 2> /dev/null > /dev/null', exitstat=iexit)
     check_for = (iexit == 0)
