@@ -95,6 +95,6 @@ PROGRAM opennodal
   CALL solver(core_x_size,core_y_size,num_eg,tol_xflux,tol_xkeff,xflux,xkeff,tol_max_iter, &
               nodal_method,assm_map,assm_xs,dtilde_x,dtilde_y,h_x,h_y)
 
-  CALL output_results()
+  CALL output_results(xflux,xkeff,core_x_size,core_y_size,nsplit,num_eg,assm_xs,h_x,h_y,assm_map)
 
 ENDPROGRAM opennodal
