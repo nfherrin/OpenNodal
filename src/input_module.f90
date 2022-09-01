@@ -33,11 +33,11 @@ MODULE input_module
   INTEGER(ki4) :: y_s=0                           !core_y_size
   REAL(kr8) :: a_p=0                              !assm_pitch
   CHARACTER(100) :: p_s='full'                    !prob_sym
-  INTEGER(ki4),ALLOCATABLE :: a_m(:,:)            !assm_map
+  INTEGER(ki4), ALLOCATABLE :: a_m(:,:)            !assm_map
   REAL(kr8), ALLOCATABLE :: d_x(:)                !h_x
   REAL(kr8), ALLOCATABLE :: d_y(:)                !h_y
   CHARACTER(100) :: b_o='vacuum'                  !bc_opt
-  REAL(kr8),ALLOCATABLE :: alb(:)                 !albedos
+  REAL(kr8), ALLOCATABLE :: alb(:)                 !albedos
   INTEGER(ki4) :: n_g                             !num_eg
   INTEGER(ki4) :: ns=1                            !nsplit
   REAL(kr8) :: t_xk = 1d-6                        !tol_xkeff
@@ -45,7 +45,7 @@ MODULE input_module
   INTEGER(ki4) :: t_m_i = 100                     !tol_max_iter
   CHARACTER(100) :: n_m='fd'                      !nodal_method
   INTEGER(ki4) :: n_a_r=1                         !num_assm_reg
-  TYPE(macro_assm_xs_type),ALLOCATABLE :: a_x(:)  !assm_xs
+  TYPE(macro_assm_xs_type), ALLOCATABLE :: a_x(:)  !assm_xs
   INTEGER(ki4) :: r_m=0                           !refl_mat
   REAL(kr8) :: a_b=0.0D0                          !ax_buckle
 
@@ -66,7 +66,7 @@ MODULE input_module
     !> number of cards in the block
     INTEGER(ki4) :: num_cards
     !> cards in the block
-    TYPE(cardType),ALLOCATABLE :: cards(:)
+    TYPE(cardType), ALLOCATABLE :: cards(:)
   ENDTYPE blockType
 
   !> actual blocks variables
@@ -78,8 +78,8 @@ MODULE input_module
   ABSTRACT INTERFACE
     SUBROUTINE prototype_wordarg(thisCard,twords)
       IMPORT :: cardType
-      CLASS(cardType),INTENT(INOUT) :: thisCard
-      CHARACTER(200),INTENT(INOUT) :: twords(:)
+      CLASS(cardType), INTENT(INOUT) :: thisCard
+      CHARACTER(200), INTENT(INOUT) :: twords(:)
     ENDSUBROUTINE prototype_wordarg
   ENDINTERFACE
 
@@ -405,7 +405,7 @@ CONTAINS
 !> @param block_name - name of the block to find
 !>
   SUBROUTINE find_block(block_name)
-    CHARACTER(MAX_CARDNAME_LEN),INTENT(IN) :: block_name
+    CHARACTER(MAX_CARDNAME_LEN), INTENT(IN) :: block_name
 
     CHARACTER(ll_max) :: t_char
     INTEGER(ki4) :: ios,i
@@ -433,8 +433,8 @@ CONTAINS
 !> @param ios - read error indicator
 !>
   SUBROUTINE get_next_line(line,ios)
-    CHARACTER(ll_max),INTENT(OUT) :: line
-    INTEGER(ki4),INTENT(OUT) :: ios
+    CHARACTER(ll_max), INTENT(OUT) :: line
+    INTEGER(ki4), INTENT(OUT) :: ios
 
     CHARACTER(ll_max) :: words(lp_max)
     INTEGER(ki4) :: nwords
@@ -457,8 +457,8 @@ CONTAINS
 !> @brief Subroutine to read in the problem title
 !>
   SUBROUTINE get_title(this_card,wwords)
-    CLASS(cardType),INTENT(INOUT) :: this_card
-    CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+    CLASS(cardType), INTENT(INOUT) :: this_card
+    CHARACTER(ll_max), INTENT(INOUT) :: wwords(:)
 
     INTEGER(ki4) :: len_str,i
 
@@ -477,8 +477,8 @@ CONTAINS
 !> @brief Subroutine to read in the problem dimensions
 !>
   SUBROUTINE get_dim(this_card,wwords)
-    CLASS(cardType),INTENT(INOUT) :: this_card
-    CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+    CLASS(cardType), INTENT(INOUT) :: this_card
+    CHARACTER(ll_max), INTENT(INOUT) :: wwords(:)
 
     CALL print_log(TRIM(this_card%cname)//' card found')
 
@@ -493,8 +493,8 @@ CONTAINS
 !> @brief Subroutine to read in the problem size
 !>
   SUBROUTINE get_size(this_card,wwords)
-    CLASS(cardType),INTENT(INOUT) :: this_card
-    CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+    CLASS(cardType), INTENT(INOUT) :: this_card
+    CHARACTER(ll_max), INTENT(INOUT) :: wwords(:)
 
     CALL print_log(TRIM(this_card%cname)//' card found')
 
@@ -505,8 +505,8 @@ CONTAINS
 !> @brief Subroutine to read in the problem pitch
 !>
   SUBROUTINE get_apitch(this_card,wwords)
-    CLASS(cardType),INTENT(INOUT) :: this_card
-    CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+    CLASS(cardType), INTENT(INOUT) :: this_card
+    CHARACTER(ll_max), INTENT(INOUT) :: wwords(:)
 
     CALL print_log(TRIM(this_card%cname)//' card found')
 
@@ -517,8 +517,8 @@ CONTAINS
 !> @brief Subroutine to read in the core symmetry
 !>
   SUBROUTINE get_sym(this_card,wwords)
-    CLASS(cardType),INTENT(INOUT) :: this_card
-    CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+    CLASS(cardType), INTENT(INOUT) :: this_card
+    CHARACTER(ll_max), INTENT(INOUT) :: wwords(:)
 
     CALL print_log(TRIM(this_card%cname)//' card found')
 
@@ -529,8 +529,8 @@ CONTAINS
 !> @brief Subroutine to read in the core assembly map
 !>
   SUBROUTINE get_assm_map(this_card,wwords)
-    CLASS(cardType),INTENT(INOUT) :: this_card
-    CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+    CLASS(cardType), INTENT(INOUT) :: this_card
+    CHARACTER(ll_max), INTENT(INOUT) :: wwords(:)
 
     INTEGER(ki4) :: nwords
     CHARACTER(ll_max) :: t_char,words(lp_max)
@@ -606,11 +606,11 @@ CONTAINS
   !> @param wwords - The string from which the data is being retrieved
   !>
     SUBROUTINE get_bc(this_card,wwords)
-      CLASS(cardType),INTENT(INOUT) :: this_card
-      CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
-      INTEGER :: i
-      REAL(kr8),ALLOCATABLE :: hxt(:),hyt(:)
-      INTEGER(ki4),ALLOCATABLE :: amt(:,:)
+      CLASS(cardType), INTENT(INOUT) :: this_card
+      CHARACTER(ll_max), INTENT(INOUT) :: wwords(:)
+      INTEGER(ki4) :: i
+      REAL(kr8), ALLOCATABLE :: hxt(:),hyt(:)
+      INTEGER(ki4), ALLOCATABLE :: amt(:,:)
 
       CALL print_log(TRIM(this_card%cname)//' card found')
 
@@ -675,8 +675,8 @@ CONTAINS
 !> @brief Subroutine to read in the nsplit option
 !>
   SUBROUTINE get_nsplit(this_card,wwords)
-    CLASS(cardType),INTENT(INOUT) :: this_card
-    CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+    CLASS(cardType), INTENT(INOUT) :: this_card
+    CHARACTER(ll_max), INTENT(INOUT) :: wwords(:)
 
     INTEGER(ki4) :: nwords
     CHARACTER(ll_max) :: t_char,words(lp_max)
@@ -693,8 +693,8 @@ CONTAINS
 !> @brief Subroutine to read in the keff tolerance
 !>
   SUBROUTINE get_k_eps(this_card,wwords)
-    CLASS(cardType),INTENT(INOUT) :: this_card
-    CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+    CLASS(cardType), INTENT(INOUT) :: this_card
+    CHARACTER(ll_max), INTENT(INOUT) :: wwords(:)
 
     INTEGER(ki4) :: nwords
     CHARACTER(ll_max) :: t_char,words(lp_max)
@@ -711,8 +711,8 @@ CONTAINS
 !> @brief Subroutine to read in the flux tolerance
 !>
   SUBROUTINE get_phi_eps(this_card,wwords)
-    CLASS(cardType),INTENT(INOUT) :: this_card
-    CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+    CLASS(cardType), INTENT(INOUT) :: this_card
+    CHARACTER(ll_max), INTENT(INOUT) :: wwords(:)
 
     INTEGER(ki4) :: nwords
     CHARACTER(ll_max) :: t_char,words(lp_max)
@@ -729,8 +729,8 @@ CONTAINS
 !> @brief Subroutine to read in max number of iterations
 !>
   SUBROUTINE get_max_its(this_card,wwords)
-    CLASS(cardType),INTENT(INOUT) :: this_card
-    CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+    CLASS(cardType), INTENT(INOUT) :: this_card
+    CHARACTER(ll_max), INTENT(INOUT) :: wwords(:)
 
     INTEGER(ki4) :: nwords
     CHARACTER(ll_max) :: t_char,words(lp_max)
@@ -747,8 +747,8 @@ CONTAINS
 !> @brief Subroutine to read in which nodal method is being used, right now only fd and poly supported
 !>
   SUBROUTINE get_nodal_method(this_card,wwords)
-    CLASS(cardType),INTENT(INOUT) :: this_card
-    CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+    CLASS(cardType), INTENT(INOUT) :: this_card
+    CHARACTER(ll_max), INTENT(INOUT) :: wwords(:)
 
     INTEGER(ki4) :: nwords
     CHARACTER(ll_max) :: t_char,words(lp_max)
@@ -769,8 +769,8 @@ CONTAINS
 !> @brief Subroutine to read in the cross section filename
 !>
   SUBROUTINE get_xs_file(this_card,wwords)
-    CLASS(cardType),INTENT(INOUT) :: this_card
-    CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+    CLASS(cardType), INTENT(INOUT) :: this_card
+    CHARACTER(ll_max), INTENT(INOUT) :: wwords(:)
 
     CALL print_log(TRIM(this_card%cname)//' card found')
 
@@ -781,8 +781,8 @@ CONTAINS
 !> @brief Subroutine to read in the cross section mapping
 !>
   SUBROUTINE get_xs_map(this_card,wwords)
-    CLASS(cardType),INTENT(INOUT) :: this_card
-    CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+    CLASS(cardType), INTENT(INOUT) :: this_card
+    CHARACTER(ll_max), INTENT(INOUT) :: wwords(:)
 
     INTEGER(ki4) :: i,ios,nwords
     CHARACTER(ll_max) :: t_char,words(lp_max)
@@ -813,8 +813,8 @@ CONTAINS
 !>    albedo boundary condition
 !>
   SUBROUTINE get_refl_mat(this_card,wwords)
-    CLASS(cardType),INTENT(INOUT) :: this_card
-    CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+    CLASS(cardType), INTENT(INOUT) :: this_card
+    CHARACTER(ll_max), INTENT(INOUT) :: wwords(:)
 
     CALL print_log(TRIM(this_card%cname)//' card found')
 
@@ -825,8 +825,8 @@ CONTAINS
 !> @brief Subroutine to read in axial buckling
 !>
   SUBROUTINE get_buckling(this_card,wwords)
-    CLASS(cardType),INTENT(INOUT) :: this_card
-    CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+    CLASS(cardType), INTENT(INOUT) :: this_card
+    CHARACTER(ll_max), INTENT(INOUT) :: wwords(:)
 
     CALL print_log(TRIM(this_card%cname)//' card found')
     IF(wwords(2) .EQ. 'height')THEN

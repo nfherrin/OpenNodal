@@ -9,9 +9,9 @@ CONTAINS
 
   REAL(kr8) PURE FUNCTION norm(vec, ell_in)
     REAL(kr8), INTENT(IN) :: vec(:)
-    INTEGER, INTENT(in), OPTIONAL :: ell_in
+    INTEGER(ki4), INTENT(IN), OPTIONAL :: ell_in
 
-    INTEGER :: ell, i
+    INTEGER(ki4) :: ell, i
 
     IF (PRESENT(ell_in)) THEN
       ell = ell_in

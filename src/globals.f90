@@ -28,7 +28,7 @@ CONTAINS
 !> @param advancing - logical to indicate if the printed message should advance the line
 !>
   SUBROUTINE print_log(log_msg,advancing)
-    CHARACTER(*),INTENT(IN) :: log_msg
+    CHARACTER(*), INTENT(IN) :: log_msg
     LOGICAL, OPTIONAL, INTENT(IN) :: advancing
     LOGICAL :: advopt
 
@@ -46,9 +46,9 @@ CONTAINS
 
   !checks for software
   FUNCTION check_for(software_name)
-    CHARACTER(*),INTENT(IN) :: software_name
+    CHARACTER(*), INTENT(IN) :: software_name
     LOGICAL :: check_for
-    INTEGER :: iexit
+    INTEGER(ki4) :: iexit
     CALL EXECUTE_COMMAND_LINE('which '//TRIM(software_name)//' 2> /dev/null > /dev/null', exitstat=iexit)
     check_for = (iexit == 0)
   ENDFUNCTION

@@ -64,7 +64,7 @@ CONTAINS
     !local variables
     INTEGER(ki4) :: t_int,g,j,i
     CHARACTER(100) :: t_char
-    REAL(kr8),ALLOCATABLE :: fiss_src(:,:)
+    REAL(kr8), ALLOCATABLE :: fiss_src(:,:)
 
     ALLOCATE(fiss_src(core_x_size,core_y_size))
     fiss_src=0.0D0

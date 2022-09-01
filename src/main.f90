@@ -21,13 +21,13 @@ PROGRAM opennodal
   !> problem symmetry
   CHARACTER(100) :: prob_sym='full'
   !> assembly map
-  INTEGER(ki4),ALLOCATABLE :: assm_map(:,:)
+  INTEGER(ki4), ALLOCATABLE :: assm_map(:,:)
   !> node widths
   REAL(kr8), ALLOCATABLE :: h_x(:),h_y(:)
   !> boundary condition option
   CHARACTER(100) :: bc_opt='vacuum'
   !> albedo boundary conditions
-  REAL(kr8),ALLOCATABLE :: albedos(:)
+  REAL(kr8), ALLOCATABLE :: albedos(:)
   !> number energy groups
   INTEGER(ki4) :: num_eg
   !> nsplit value, for decomposing nodes into nsplit number of sub-nodes
@@ -43,7 +43,7 @@ PROGRAM opennodal
   !> number of unique assemblies
   INTEGER(ki4) :: num_assm_reg
   !> assembly level cross sections for the problem
-  TYPE(macro_assm_xs_type),ALLOCATABLE :: assm_xs(:)
+  TYPE(macro_assm_xs_type), ALLOCATABLE :: assm_xs(:)
   !> reflector material
   INTEGER(ki4) :: refl_mat=0
   !> axial buckling for 2D problems
@@ -53,7 +53,7 @@ PROGRAM opennodal
   !>  scalar flux
   REAL(kr8), ALLOCATABLE :: xflux(:,:,:) ! (nx,ny,ng
   !>D-tilde correction factors for each surface
-  REAL(kr8),ALLOCATABLE  :: dtilde_x(:,:,:),dtilde_y(:,:,:)
+  REAL(kr8), ALLOCATABLE  :: dtilde_x(:,:,:),dtilde_y(:,:,:)
 
   !standard output
   stdout_unit=OUTPUT_UNIT

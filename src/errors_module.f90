@@ -14,7 +14,7 @@ CONTAINS
 !> @param message - error message to print
 !>
   SUBROUTINE fatal_error(message)
-    CHARACTER(*), OPTIONAL,INTENT(IN) :: message
+    CHARACTER(*), OPTIONAL, INTENT(IN) :: message
 
     ! Print message
     CALL print_log("*****************************************************************************")
@@ -42,7 +42,7 @@ CONTAINS
 !> @param message - warning message to print
 !>
   SUBROUTINE raise_warning(message)
-    CHARACTER(*), OPTIONAL,INTENT(IN) :: message
+    CHARACTER(*), OPTIONAL, INTENT(IN) :: message
 
     IF (PRESENT(message)) THEN
       CALL print_log(' *** WARNING: '//TRIM(ADJUSTL(message)))

@@ -22,10 +22,10 @@ CONTAINS
 !> @param nargs - number of arguments after delimiting
 !>
   SUBROUTINE parse(str,delims,args,nargs)
-    CHARACTER(*),INTENT(INOUT) :: str
-    CHARACTER(*),INTENT(IN) :: delims
-    CHARACTER(*),INTENT(OUT) :: args(:)
-    INTEGER(ki4),INTENT(OUT) :: nargs
+    CHARACTER(*), INTENT(INOUT) :: str
+    CHARACTER(*), INTENT(IN) :: delims
+    CHARACTER(*), INTENT(OUT) :: args(:)
+    INTEGER(ki4), INTENT(OUT) :: nargs
 
     CHARACTER(LEN_TRIM(str)) :: strsav
     INTEGER(ki4) :: na,i,lenstr
@@ -54,7 +54,7 @@ CONTAINS
 !> @param str - input string to compact
 !>
   SUBROUTINE compact(str)
-    CHARACTER(*),INTENT(INOUT) :: str
+    CHARACTER(*), INTENT(INOUT) :: str
 
     CHARACTER(1):: ch
     CHARACTER(LEN_TRIM(str)) :: outstr
@@ -96,10 +96,10 @@ CONTAINS
 !> @param sep - contains the found delimiter
 !>
   SUBROUTINE split(str,delims,before,sep)
-    CHARACTER(*),INTENT(INOUT) :: str
-    CHARACTER(*),INTENT(IN) :: delims
-    CHARACTER(*),INTENT(OUT) :: before
-    CHARACTER,INTENT(INOUT),OPTIONAL :: sep
+    CHARACTER(*), INTENT(INOUT) :: str
+    CHARACTER(*), INTENT(IN) :: delims
+    CHARACTER(*), INTENT(OUT) :: before
+    CHARACTER, INTENT(INOUT), OPTIONAL :: sep
 
     LOGICAL :: pres
     CHARACTER :: ch,cha
@@ -160,7 +160,7 @@ CONTAINS
 !> @param str - string to remove backslashes from
 !>
   SUBROUTINE removebksl(str)
-    CHARACTER(*),INTENT(INOUT) :: str
+    CHARACTER(*), INTENT(INOUT) :: str
 
     CHARACTER(1):: ch
     CHARACTER(LEN_TRIM(str))::outstr
@@ -241,7 +241,7 @@ CONTAINS
 !> @param str - string to make lowercase
 !>
   FUNCTION lowercase(str)
-    CHARACTER(*),INTENT(IN):: str
+    CHARACTER(*), INTENT(IN):: str
     CHARACTER(len_trim(str)):: lowercase
 
     INTEGER(ki4) :: i,iav,ilen,ioffset,iqc,iquote
@@ -275,7 +275,7 @@ CONTAINS
 !> @param str - string to make uppercase
 !>
   FUNCTION uppercase(str)
-    CHARACTER(*),INTENT(IN):: str
+    CHARACTER(*), INTENT(IN):: str
     CHARACTER(len_trim(str)):: uppercase
 
     INTEGER(ki4) :: i,iav,ilen,ioffset,iqc,iquote

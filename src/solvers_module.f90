@@ -15,7 +15,7 @@ MODULE solvers_module
 
 CONTAINS
 
-  INTEGER PURE FUNCTION calc_idx(i, j, core_x_size)
+  INTEGER(ki4) PURE FUNCTION calc_idx(i, j, core_x_size)
     INTEGER, INTENT(IN) :: i, j, core_x_size
     calc_idx=(j-1)*core_x_size+i
     RETURN
@@ -37,10 +37,10 @@ CONTAINS
     REAL(kr8), INTENT(OUT) :: xkeff
     REAL(kr8), INTENT(INOUT), ALLOCATABLE :: h_x(:),h_y(:)
     REAL(kr8), INTENT(OUT), ALLOCATABLE :: xflux(:,:,:),dtilde_x(:,:,:),dtilde_y(:,:,:)
-    CHARACTER(100), INTENT(IN) :: bc_opt,prob_sym
+    CHARACTER(*), INTENT(IN) :: bc_opt,prob_sym
     !local variables
-    INTEGER :: i,ii,j,jj,g,ip,jp,temp_map(core_x_size,core_y_size)
-    INTEGER :: temp_hx(core_x_size),temp_hy(core_y_size)
+    INTEGER(ki4) :: i,ii,j,jj,g,ip,jp,temp_map(core_x_size,core_y_size)
+    INTEGER(ki4) :: temp_hx(core_x_size),temp_hy(core_y_size)
     REAL(kr8) :: gamma(num_eg)
 
     !set gaps in ragged core equal to the reflector material
@@ -222,16 +222,16 @@ CONTAINS
     INTEGER, INTENT(IN) :: core_x_size,core_y_size,num_eg,tol_max_iter,assm_map(:,:)
     REAL(kr8), INTENT(IN) :: tol_xflux,tol_xkeff,h_x(:),h_y(:)
     REAL(kr8), INTENT(INOUT) :: xflux(:,:,:),xkeff,dtilde_x(:,:,:),dtilde_y(:,:,:)
-    CHARACTER(100), INTENT(IN) :: nodal_method
+    CHARACTER(*), INTENT(IN) :: nodal_method
     TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
     !local variables
     INTEGER(ki4) :: i, j, gp, g
     INTEGER(ki4) :: iter
     REAL(kr8) :: conv_xflux, conv_xkeff,keff_old
-    REAL(kr8), ALLOCATABLE :: amat(:,:,:),flux_old(:,:,:) ! (core_x_size*core_y_size*num_eg, core_x_size*core_y_size*num_eg)
+    REAL(kr8), ALLOCATABLE :: amat(:,:,:),flux_old(:,:,:)
     REAL(kr8), ALLOCATABLE :: bvec(:,:)
     REAL(kr8) :: fiss_src_sum(2)
-    INTEGER :: prob_size
+    INTEGER(ki4) :: prob_size
 
     prob_size=core_x_size*core_y_size
 
@@ -386,8 +386,8 @@ CONTAINS
     INTEGER(ki4) :: core_x_size,core_y_size
     REAL(kr8), INTENT(OUT) :: dense(:,:)
 
-    INTEGER :: i, j
-    INTEGER :: cell_idx, neigh_idx
+    INTEGER(ki4) :: i, j
+    INTEGER(ki4) :: cell_idx, neigh_idx
 
     dense = 0d0
 
@@ -442,10 +442,10 @@ CONTAINS
 
     ! for dgesv
     REAL(kr8), ALLOCATABLE :: atemp(:,:)
-    INTEGER(kr4), ALLOCATABLE :: ipiv(:)
-    INTEGER :: ierr
-    INTEGER :: cell_idx
-    INTEGER :: i, j
+    INTEGER(ki4), ALLOCATABLE :: ipiv(:)
+    INTEGER(ki4) :: ierr
+    INTEGER(ki4) :: cell_idx
+    INTEGER(ki4) :: i, j
 
     SELECT CASE (method)
       CASE ('dgesv')
@@ -507,7 +507,7 @@ CONTAINS
   SUBROUTINE add_downscatter(bvec,gin,core_x_size,core_y_size,num_eg,assm_xs,assm_map,xflux)
     REAL(kr8), INTENT(INOUT) :: bvec(:,:)
     REAL(kr8), INTENT(IN) :: xflux(:,:,:)
-    INTEGER(ki4),INTENT(IN) :: gin,core_x_size,core_y_size,num_eg,assm_map(:,:)
+    INTEGER(ki4), INTENT(IN) :: gin,core_x_size,core_y_size,num_eg,assm_map(:,:)
     TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
     !local variables
     INTEGER(ki4) :: i,j,g,cell_idx,loc_id
@@ -561,10 +561,10 @@ CONTAINS
     REAL(kr8), INTENT(INOUT) :: dtilde_x(:,:,:),dtilde_y(:,:,:)
     TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
     !local variables
-    REAL(kr8),INTENT(OUT) :: s_bar_x(:,:,:),s_bar_y(:,:,:)
+    REAL(kr8), INTENT(OUT) :: s_bar_x(:,:,:),s_bar_y(:,:,:)
     REAL(kr8) :: j_x(core_x_size+1,core_y_size,num_eg),j_y(core_x_size,core_y_size+1,num_eg)
     REAL(kr8) :: l_bar_x(core_x_size,core_y_size,num_eg),l_bar_y(core_x_size,core_y_size,num_eg)
-    INTEGER :: i,j,g
+    INTEGER(ki4) :: i,j,g
 
     !compute x direction currents at each face
     j_x=0.0D0
