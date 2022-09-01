@@ -9,6 +9,7 @@ PROGRAM opennodal
   USE output_module
   USE solvers_module
   USE xs_types
+  USE string_module
   USE, INTRINSIC :: ISO_FORTRAN_ENV
   IMPLICIT NONE
 
@@ -57,6 +58,11 @@ PROGRAM opennodal
   !> Weilandt shift value
   REAL(kr8) :: dl_weilandt=-1.0D0
 
+  !variables to open log file
+  CHARACTER(100) :: t_char
+  CHARACTER(100) :: words(100)
+  INTEGER(ki4) :: nwords,i
+
   !standard output
   stdout_unit=OUTPUT_UNIT
 
@@ -64,7 +70,14 @@ PROGRAM opennodal
   CALL read_cmd_args()
 
   !open the log file
-  OPEN(UNIT=log_unit, FILE=TRIM(ADJUSTL(base_in))//'.log', STATUS="REPLACE", ACTION="WRITE")
+  t_char=base_in
+  CALL parse(t_char,'.',words,nwords)
+  t_char=TRIM(ADJUSTL(words(1)))
+  DO i=2,nwords
+    IF((words(i) .EQ. 'inp' .OR. words(i) .EQ. 'input' .OR. words(i) .EQ. 'in') .AND. i .EQ. nwords)EXIT
+    t_char=TRIM(ADJUSTL(t_char))//'.'//TRIM(ADJUSTL(words(i)))
+  ENDDO
+  OPEN(UNIT=log_unit, FILE=TRIM(ADJUSTL(t_char))//'.log', STATUS="REPLACE", ACTION="WRITE")
 
   !print the header
   CALL print_log('***************************** OpenNodal - Version 1 *****************************')

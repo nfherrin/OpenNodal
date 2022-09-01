@@ -280,6 +280,7 @@ CONTAINS
     !big lambda for weilandt shift
     REAL(kr8) :: big_lambda
     LOGICAL :: weilandt_on
+    INTEGER(ki4), PARAMETER :: weiland_pre_its=5
 
     weilandt_on=(dl_weilandt>0.0D0)
     prob_size=core_x_size*core_y_size
@@ -311,37 +312,32 @@ CONTAINS
     DO iter = 1,tol_max_iter
 
       ! build the bvec based on current keff and flux
-      IF(weilandt_on .AND. iter > 10)THEN
+      IF(weilandt_on .AND. iter > weiland_pre_its)THEN
         CALL build_bvec(bvec,core_x_size,core_y_size,num_eg,assm_xs,big_lambda,xflux,assm_map)
       ELSE
         CALL build_bvec(bvec,core_x_size,core_y_size,num_eg,assm_xs,xkeff,xflux,assm_map)
       ENDIF
-      DO g=1,num_eg
-        CALL add_downscatter(bvec,g,core_x_size,core_y_size,num_eg,assm_xs,assm_map,xflux)
-      ENDDO
 
-      IF(weilandt_on .AND. iter > 10)THEN
+      IF(weilandt_on .AND. iter > weiland_pre_its)THEN
         lambda_p=xkeff_old+dl_weilandt
-        CALL add_weilandt_tobvec(bvec,lambda_p,assm_xs,core_x_size,core_y_size,num_eg, &
-                                  assm_map,xflux)
-        ! amat=weilandt_shift_amatrix(amat_base,lambda_p,assm_xs,core_x_size,core_y_size,num_eg, &
-        !                           assm_map,xflux)
+        amat=amat_base
+        CALL weilandt_shift_amatrix(amat,lambda_p,assm_xs,core_x_size,core_y_size,num_eg, &
+                                    assm_map,xflux)
       ENDIF
-      ! TODO implement inner tolerances
+
       DO g=1,num_eg
         CALL inner_solve(inner_solve_method, prob_size, 1d-1*MIN(tol_xflux,tol_xkeff), 10000, &
                         amat(:,:,g), bvec(:,g), xflux(:,:,g),core_x_size,core_y_size)
+        CALL add_downscatter(bvec,g,core_x_size,core_y_size,num_eg,assm_xs,assm_map,xflux)
       ENDDO
 
       fiss_src_sum(2)=calc_fiss_src_sum(core_x_size,core_y_size,num_eg,assm_map,xflux,assm_xs)
 
       IF (iter > 1) THEN
-        IF(weilandt_on .AND. iter > 10)THEN
+        IF(weilandt_on .AND. iter > weiland_pre_its)THEN
           !if it's weilandt shift, update appropriately
           big_lambda=big_lambda*fiss_src_sum(2)/fiss_src_sum(1)
           xkeff=(1.0D0/lambda_p+1.0D0/big_lambda)**(-1)
-          write(*,'(A,20ES16.8)')'lambda_p, big_lambda, xkeff',lambda_p,big_lambda,xkeff
-          IF(xkeff .LE. 0)STOP 'negative ckeff'
         ELSE
           xkeff=xkeff*fiss_src_sum(2)/fiss_src_sum(1)
           !this is for the early weilandt shift cases
@@ -684,17 +680,27 @@ CONTAINS
     ENDDO ! gp = 1,num_eg
   ENDFUNCTION calc_fiss_src_sum
 
-  !shift the amatrix using the weilandt shift
-  FUNCTION weilandt_shift_amatrix(amat_base,lambda_p,assm_xs,core_x_size,core_y_size,num_eg, &
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine shifts the amatrix using the weilandt shift
+!> @param amat - a matrix to shift
+!> @param lambda_p - eigenvalue shift
+!> @param assm_xs - assembly level cross sections
+!> @param core_x_size - core size in the x direction
+!> @param core_y_size - core size in the y direction
+!> @param num_eg - number of energy groups
+!> @param assm_map - assembly map
+!> @param xflux - scalar flux
+!>
+  SUBROUTINE weilandt_shift_amatrix(amat,lambda_p,assm_xs,core_x_size,core_y_size,num_eg, &
                                   assm_map,xflux)
-    REAL(kr8),INTENT(IN) :: amat_base(:,:,:),lambda_p,xflux(:,:,:)
+    REAL(kr8),INTENT(INOUT) :: amat(:,:,:)
+    REAL(kr8),INTENT(IN) :: lambda_p,xflux(:,:,:)
     TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
     INTEGER(ki4), INTENT(IN) :: core_x_size,core_y_size,num_eg,assm_map(:,:)
     !local variables
-    REAL(kr8) :: weilandt_shift_amatrix(5,core_x_size*core_y_size,num_eg)
     INTEGER(ki4) :: g,i,j,cell_idx,loc_id
     REAL(kr8) :: fiss_src
-    weilandt_shift_amatrix=amat_base
+
     DO i=1,core_x_size
       DO j=1,core_y_size
         loc_id=assm_map(i,j)
@@ -703,39 +709,14 @@ CONTAINS
         DO g=1,num_eg
           fiss_src=fiss_src+xflux(i,j,g)*assm_xs(loc_id)%nusigma_f(g)
         ENDDO
+        fiss_src=fiss_src/lambda_p
         DO g=1,num_eg
-          weilandt_shift_amatrix(1,cell_idx,g)=weilandt_shift_amatrix(1,cell_idx,g)&
-            -(fiss_src*assm_xs(loc_id)%chi(g))/(lambda_p*xflux(i,j,g))
+          amat(1,cell_idx,g)=amat(1,cell_idx,g)&
+            -(fiss_src*assm_xs(loc_id)%chi(g))/xflux(i,j,g)
         ENDDO
       ENDDO
     ENDDO
-  ENDFUNCTION weilandt_shift_amatrix
-
-  SUBROUTINE add_weilandt_tobvec(bvec,lambda_p,assm_xs,core_x_size,core_y_size,num_eg, &
-                                assm_map,xflux)
-    REAL(kr8), INTENT(INOUT) :: bvec(:,:)
-    REAL(kr8), INTENT(IN) :: lambda_p,xflux(:,:,:)
-    INTEGER(ki4), INTENT(IN) :: core_x_size,core_y_size,num_eg,assm_map(:,:)
-    TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
-    !local variables
-    INTEGER(ki4) :: i,j,g,loc_id,cell_idx
-    REAL(kr8) :: fiss_src
-
-    DO j=1,core_y_size
-      DO i=1,core_x_size
-        cell_idx=calc_idx(i,j,core_x_size)
-        loc_id=assm_map(i,j)
-        fiss_src=0.0D0
-        DO g=1,num_eg
-          fiss_src=fiss_src+xflux(i,j,g)*assm_xs(loc_id)%nusigma_f(g)
-        ENDDO
-        DO g=1,num_eg
-          !add down-scattering source
-          bvec(cell_idx,g)=bvec(cell_idx,g)+(fiss_src*assm_xs(loc_id)%chi(g))/lambda_p
-        ENDDO
-      ENDDO
-    ENDDO
-  ENDSUBROUTINE add_weilandt_tobvec
+  ENDSUBROUTINE weilandt_shift_amatrix
 
 !---------------------------------------------------------------------------------------------------
 !> @brief This subroutine calculates dtilde

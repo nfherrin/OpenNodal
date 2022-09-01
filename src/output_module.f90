@@ -38,7 +38,7 @@ CONTAINS
     CALL parse(base_in,'.',words,nwords)
     prob_title=TRIM(ADJUSTL(words(1)))
     DO i=2,nwords
-      IF(words(i) .EQ. 'inp')EXIT
+      IF((words(i) .EQ. 'inp' .OR. words(i) .EQ. 'input' .OR. words(i) .EQ. 'in') .AND. i .EQ. nwords)EXIT
       prob_title=TRIM(ADJUSTL(prob_title))//'.'//TRIM(ADJUSTL(words(i)))
     ENDDO
 
