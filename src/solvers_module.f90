@@ -270,16 +270,18 @@ CONTAINS
     !local variables
     INTEGER(ki4) :: i, j, gp, g
     INTEGER(ki4) :: iter
-    REAL(kr8) :: conv_xflux, conv_xkeff,ckeff_old
+    REAL(kr8) :: conv_xflux, conv_xkeff,xkeff_old
     REAL(kr8), ALLOCATABLE :: amat(:,:,:),flux_old(:,:,:),amat_base(:,:,:)
     REAL(kr8), ALLOCATABLE :: bvec(:,:)
     REAL(kr8) :: fiss_src_sum(2)
-    !computed keff taking account for the weiland shift
-    REAL(kr8) :: ckeff
+    INTEGER :: prob_size
     !lambda prime for weilandt shift
     REAL(kr8) :: lambda_p
-    INTEGER :: prob_size
+    !big lambda for weilandt shift
+    REAL(kr8) :: big_lambda
+    LOGICAL :: weilandt_on
 
+    weilandt_on=(dl_weilandt>0.0D0)
     prob_size=core_x_size*core_y_size
 
     ! build amatrix. This will change with dtilde
@@ -291,7 +293,7 @@ CONTAINS
     CALL build_amatrix(amat,core_x_size,core_y_size,num_eg,assm_xs,assm_map,h_x,h_y,dtilde_x, &
                         dtilde_y)
     !set the base amatrix if we're doing weilandt shift
-    IF(dl_weilandt .GT. 0.0D0)THEN
+    IF(weilandt_on)THEN
       ALLOCATE(amat_base(5, core_x_size*core_y_size,num_eg))
       amat_base=amat
     ENDIF
@@ -301,22 +303,29 @@ CONTAINS
     conv_xflux = 1d2*tol_xflux + 1d0
     conv_xkeff = 1d2*tol_xkeff + 1d0
     flux_old=xflux
-    ckeff=xkeff
-    ckeff_old=ckeff
+    xkeff_old=xkeff
+    big_lambda=xkeff
+    lambda_p=xkeff
 
 
     DO iter = 1,tol_max_iter
 
       ! build the bvec based on current keff and flux
-      CALL build_bvec(bvec,core_x_size,core_y_size,num_eg,assm_xs,xkeff,xflux,assm_map)
+      IF(weilandt_on .AND. iter > 10)THEN
+        CALL build_bvec(bvec,core_x_size,core_y_size,num_eg,assm_xs,big_lambda,xflux,assm_map)
+      ELSE
+        CALL build_bvec(bvec,core_x_size,core_y_size,num_eg,assm_xs,xkeff,xflux,assm_map)
+      ENDIF
       DO g=1,num_eg
         CALL add_downscatter(bvec,g,core_x_size,core_y_size,num_eg,assm_xs,assm_map,xflux)
       ENDDO
 
-      IF(dl_weilandt .GT. 0.0D0 .AND. iter > 10)THEN
-        lambda_p=ckeff_old+dl_weilandt
-        amat=weilandt_shift_amatrix(amat_base,lambda_p,assm_xs,core_x_size,core_y_size,num_eg, &
+      IF(weilandt_on .AND. iter > 10)THEN
+        lambda_p=xkeff_old+dl_weilandt
+        CALL add_weilandt_tobvec(bvec,lambda_p,assm_xs,core_x_size,core_y_size,num_eg, &
                                   assm_map,xflux)
+        ! amat=weilandt_shift_amatrix(amat_base,lambda_p,assm_xs,core_x_size,core_y_size,num_eg, &
+        !                           assm_map,xflux)
       ENDIF
       ! TODO implement inner tolerances
       DO g=1,num_eg
@@ -327,17 +336,19 @@ CONTAINS
       fiss_src_sum(2)=calc_fiss_src_sum(core_x_size,core_y_size,num_eg,assm_map,xflux,assm_xs)
 
       IF (iter > 1) THEN
-        xkeff=xkeff*fiss_src_sum(2)/fiss_src_sum(1)
-        ckeff=xkeff
-        !if it's weilandt shift, update appropriately
-        IF(dl_weilandt .GT. 0.0D0 .AND. iter > 10)THEN
-          write(*,*)lambda_p,xkeff
-          ckeff=(1.0D0/lambda_p+1.0D0/xkeff)**(-1)
-          write(*,*)ckeff
-          IF(ckeff .LE. 0)STOP 'negative ckeff'
+        IF(weilandt_on .AND. iter > 10)THEN
+          !if it's weilandt shift, update appropriately
+          big_lambda=big_lambda*fiss_src_sum(2)/fiss_src_sum(1)
+          xkeff=(1.0D0/lambda_p+1.0D0/big_lambda)**(-1)
+          write(*,'(A,20ES16.8)')'lambda_p, big_lambda, xkeff',lambda_p,big_lambda,xkeff
+          IF(xkeff .LE. 0)STOP 'negative ckeff'
+        ELSE
+          xkeff=xkeff*fiss_src_sum(2)/fiss_src_sum(1)
+          !this is for the early weilandt shift cases
+          big_lambda=xkeff
         ENDIF
       ENDIF
-      conv_xkeff=ABS(ckeff-ckeff_old) ! absolute
+      conv_xkeff=ABS(xkeff-xkeff_old) ! absolute
 
       ! maximal relative change in flux
       ! TODO should be measured in power/fission source
@@ -352,11 +363,11 @@ CONTAINS
       ENDDO ! gp = 1,num_eq
 
       ! store old data
-      ckeff_old=ckeff
+      xkeff_old=xkeff
       flux_old=xflux
       fiss_src_sum(1) = fiss_src_sum(2)
 
-      CALL print_log(TRIM(str(iter,5))//'   '//TRIM(str(ckeff,6,'F'))//'   '//TRIM(str(conv_xkeff,2)) &
+      CALL print_log(TRIM(str(iter,5))//'   '//TRIM(str(xkeff,6,'F'))//'   '//TRIM(str(conv_xkeff,2)) &
         //'   '//TRIM(str(conv_xflux,2)))
       !update the dtilde factors if we are using the poly expansion method
       IF(nodal_method .EQ. 'poly')THEN
@@ -364,7 +375,7 @@ CONTAINS
                         dtilde_y,h_x,h_y)
         CALL build_amatrix(amat,core_x_size,core_y_size,num_eg,assm_xs,assm_map,h_x,h_y,dtilde_x, &
                           dtilde_y)
-        IF(dl_weilandt .GT. 0.0D0)THEN
+        IF(weilandt_on)THEN
           amat_base=amat
         ENDIF
       ENDIF
@@ -372,8 +383,6 @@ CONTAINS
       IF ((conv_xflux < tol_xflux) .AND. (conv_xkeff < tol_xkeff)) EXIT
 
     ENDDO ! iter = 1,tol_max_iter
-
-    xkeff=ckeff
 
     DEALLOCATE(amat, flux_old, bvec)
 
@@ -701,6 +710,32 @@ CONTAINS
       ENDDO
     ENDDO
   ENDFUNCTION weilandt_shift_amatrix
+
+  SUBROUTINE add_weilandt_tobvec(bvec,lambda_p,assm_xs,core_x_size,core_y_size,num_eg, &
+                                assm_map,xflux)
+    REAL(kr8), INTENT(INOUT) :: bvec(:,:)
+    REAL(kr8), INTENT(IN) :: lambda_p,xflux(:,:,:)
+    INTEGER(ki4), INTENT(IN) :: core_x_size,core_y_size,num_eg,assm_map(:,:)
+    TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
+    !local variables
+    INTEGER(ki4) :: i,j,g,loc_id,cell_idx
+    REAL(kr8) :: fiss_src
+
+    DO j=1,core_y_size
+      DO i=1,core_x_size
+        cell_idx=calc_idx(i,j,core_x_size)
+        loc_id=assm_map(i,j)
+        fiss_src=0.0D0
+        DO g=1,num_eg
+          fiss_src=fiss_src+xflux(i,j,g)*assm_xs(loc_id)%nusigma_f(g)
+        ENDDO
+        DO g=1,num_eg
+          !add down-scattering source
+          bvec(cell_idx,g)=bvec(cell_idx,g)+(fiss_src*assm_xs(loc_id)%chi(g))/lambda_p
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDSUBROUTINE add_weilandt_tobvec
 
 !---------------------------------------------------------------------------------------------------
 !> @brief This subroutine calculates dtilde

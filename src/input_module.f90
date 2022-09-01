@@ -48,7 +48,7 @@ MODULE input_module
   TYPE(macro_assm_xs_type), ALLOCATABLE :: a_x(:) !assm_xs
   INTEGER(ki4) :: r_m=0                           !refl_mat
   REAL(kr8) :: a_b=0.0D0                          !ax_buckle
-  REAL(kr8) :: d_w=-1.0D0                 !weilandt shift value
+  REAL(kr8) :: d_w=-1.0D0                         !weilandt shift value
 
   !> This data type stores card information and reads card data
   TYPE :: cardType
