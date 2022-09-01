@@ -88,11 +88,12 @@ PROGRAM opennodal
   ! initialize memory
   ! this is done here to allow for multi-state runs in the future rather than
   ! initializing inside of the solver
-
   CALL solver_init(core_x_size,core_y_size,num_eg,assm_map,refl_mat,num_assm_reg,assm_xs,ax_buckle, &
                   h_x,h_y,nsplit,assm_pitch,xkeff,xflux,dtilde_x,dtilde_y,bc_opt,albedos,prob_sym)
 
-  CALL solver()
+  !call the solver
+  CALL solver(core_x_size,core_y_size,num_eg,tol_xflux,tol_xkeff,xflux,xkeff,tol_max_iter, &
+              nodal_method,assm_map,assm_xs,dtilde_x,dtilde_y,h_x,h_y)
 
   CALL output_results()
 
