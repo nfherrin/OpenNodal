@@ -6,6 +6,7 @@ MODULE output_module
   USE globals
   USE errors_module
   USE string_module
+  USE xs_types
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: output_results
@@ -13,8 +14,24 @@ MODULE output_module
   INTEGER(ki4),PARAMETER :: out_unit=31
 CONTAINS
 
-  !output results
-  SUBROUTINE output_results()
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine outputs all results
+!> @param xflux - scalar flux
+!> @param xkeff - eigenvalue
+!> @param core_x_size - core size in the x direction
+!> @param core_y_size - core size in the y direction
+!> @param nsplit - nsplit value, for decomposing nodes into nsplit number of sub-nodes
+!> @param num_eg - number of energy groups
+!> @param assm_xs - assembly level cross sections
+!> @param h_x - node widths in the x direction
+!> @param h_y - node widths in the y direction
+!> @param assm_map - assembly map
+!>
+  SUBROUTINE output_results(xflux,xkeff,core_x_size,core_y_size,nsplit,num_eg,assm_xs,h_x,h_y,assm_map)
+    INTEGER(ki4), INTENT(IN) :: core_x_size,core_y_size,nsplit,num_eg,assm_map(:,:)
+    REAL(kr8), INTENT(IN) :: xflux(:,:,:),xkeff,h_x(:),h_y(:)
+    TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
+    !local variables
     INTEGER(ki4) :: t_int,g,j,i,nwords
     CHARACTER(100) :: t_char,words(100)
 
@@ -45,17 +62,31 @@ CONTAINS
 
     CLOSE(out_unit)
 
-    CALL create_flux_csv()
+    CALL create_flux_csv(core_x_size,core_y_size,num_eg,xflux,h_x,h_y,assm_xs,assm_map)
 
     !only plot if gnuplot is found
-    IF(check_for('gnuplot'))CALL plot_flux()
+    IF(check_for('gnuplot'))CALL plot_flux(num_eg,h_x,h_y)
   ENDSUBROUTINE output_results
 
-  !creates the flux csv output
-  SUBROUTINE create_flux_csv()
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine creates the flux csv output
+!> @param core_x_size - core size in the x direction
+!> @param core_y_size - core size in the y direction
+!> @param num_eg - number of energy groups
+!> @param xflux - scalar flux
+!> @param h_x - node widths in the x direction
+!> @param h_y - node widths in the y direction
+!> @param assm_xs - assembly level cross sections
+!> @param assm_map - assembly map
+!>
+  SUBROUTINE create_flux_csv(core_x_size,core_y_size,num_eg,xflux,h_x,h_y,assm_xs,assm_map)
+    INTEGER(ki4), INTENT(IN) :: core_x_size,core_y_size,num_eg,assm_map(:,:)
+    REAL(kr8), INTENT(IN) :: h_x(:),h_y(:),xflux(:,:,:)
+    TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
+    !local variables
     INTEGER(ki4) :: t_int,g,j,i
     CHARACTER(100) :: t_char
-    REAL(kr8),ALLOCATABLE :: fiss_src(:,:)
+    REAL(kr8), ALLOCATABLE :: fiss_src(:,:)
 
     ALLOCATE(fiss_src(core_x_size,core_y_size))
     fiss_src=0.0D0
@@ -98,12 +129,19 @@ CONTAINS
     CLOSE(out_unit)
 
     DEALLOCATE(fiss_src)
-    !TODO: change output filenames based on problem title...
 
   ENDSUBROUTINE create_flux_csv
 
-  !plot the flux in the CSV files using gnuplot, like a real engineer...
-  SUBROUTINE plot_flux()
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine plots the flux in the CSV files using gnuplot, like a real engineer...
+!> @param num_eg - number of energy groups
+!> @param h_x - node widths in the x direction
+!> @param h_y - node widths in the y direction
+!>
+  SUBROUTINE plot_flux(num_eg,h_x,h_y)
+    INTEGER(ki4), INTENT(IN) :: num_eg
+    REAL(kr8), INTENT(IN) :: h_x(:),h_y(:)
+    !local variables
     INTEGER(ki4) :: t_int,g
     CHARACTER(100) :: t_char
     INTEGER(ki4) :: out_unit_temp=41

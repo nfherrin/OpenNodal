@@ -5,6 +5,8 @@
 MODULE solvers_module
   USE globals
   USE errors_module
+  USE xs_types
+  USE string_module
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: solver,solver_init
@@ -13,19 +15,57 @@ MODULE solvers_module
 
 CONTAINS
 
-  INTEGER PURE FUNCTION calc_idx(i, j)
-    USE globals, ONLY : core_x_size, core_y_size
-    INTEGER, INTENT(IN) :: i, j
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine computes the cell id based on the 2D map
+!> @param i - x location index
+!> @param j - y location index
+!> @param core_x_size - core size in the x direction
+!>
+  INTEGER(ki4) PURE FUNCTION calc_idx(i, j, core_x_size)
+    INTEGER, INTENT(IN) :: i, j, core_x_size
     calc_idx=(j-1)*core_x_size+i
     RETURN
   ENDFUNCTION calc_idx
 
 !---------------------------------------------------------------------------------------------------
-!> @brief This subroutine solves the nodal problem
+!> @brief This subroutine initializes values for the nodal solver (i.e. BC/splitting stuff)
+!> @param core_x_size - core size in the x direction
+!> @param core_y_size - core size in the y direction
+!> @param num_eg - number of energy groups
+!> @param assm_map - assembly map
+!> @param refl_mat - reflector material
+!> @param num_assm_reg - number of unique assemblies
+!> @param assm_xs - assembly level cross sections
+!> @param ax_buckle - axial buckling for 2D problems
+!> @param h_x - node widths in the x direction
+!> @param h_y - node widths in the y direction
+!> @param nsplit - nsplit value, for decomposing nodes into nsplit number of sub-nodes
+!> @param assm_pitch - assembly pitch
+!> @param xkeff - eigenvalue
+!> @param xflux - scalar flux
+!> @param dtilde_x - current correction cross section used in the x direction
+!> @param dtilde_y - current correction cross section used in the y direction
+!> @param bc_opt - boundary condition option
+!> @param albedos - albedo boundary conditions
+!> @param prob_sym - problem symmetry
 !>
-  SUBROUTINE solver_init()
-    INTEGER :: i,ii,j,jj,g,ip,jp,temp_map(core_x_size,core_y_size)
-    INTEGER :: temp_hx(core_x_size),temp_hy(core_y_size)
+  SUBROUTINE solver_init(core_x_size,core_y_size,num_eg,assm_map,refl_mat,num_assm_reg,assm_xs, &
+                          ax_buckle,h_x,h_y,nsplit,assm_pitch,xkeff,xflux,dtilde_x,dtilde_y,bc_opt, &
+                          albedos,prob_sym)
+    !input/output variables
+    INTEGER(ki4), INTENT(INOUT) :: core_x_size,core_y_size
+    INTEGER(ki4), INTENT(INOUT), ALLOCATABLE :: assm_map(:,:)
+    INTEGER(ki4), INTENT(IN) :: num_eg,refl_mat,num_assm_reg,nsplit
+    TYPE(macro_assm_xs_type), INTENT(INOUT) :: assm_xs(:)
+    REAL(kr8), INTENT(IN) :: ax_buckle,albedos(:)
+    REAL(kr8), INTENT(INOUT) :: assm_pitch
+    REAL(kr8), INTENT(OUT) :: xkeff
+    REAL(kr8), INTENT(INOUT), ALLOCATABLE :: h_x(:),h_y(:)
+    REAL(kr8), INTENT(OUT), ALLOCATABLE :: xflux(:,:,:),dtilde_x(:,:,:),dtilde_y(:,:,:)
+    CHARACTER(*), INTENT(IN) :: bc_opt,prob_sym
+    !local variables
+    INTEGER(ki4) :: i,ii,j,jj,g,ip,jp,temp_map(core_x_size,core_y_size)
+    INTEGER(ki4) :: temp_hx(core_x_size),temp_hy(core_y_size)
     REAL(kr8) :: gamma(num_eg)
 
     !set gaps in ragged core equal to the reflector material
@@ -75,7 +115,7 @@ CONTAINS
       assm_pitch=assm_pitch/(nsplit*1.0D0)
     ENDIF
     xkeff = 1d0
-    allocate(xflux(core_x_size,core_y_size,num_eg))
+    ALLOCATE(xflux(core_x_size,core_y_size,num_eg))
     xflux = 1d0
     !allocate dtildes
     ALLOCATE(dtilde_x(core_x_size+1,core_y_size,num_eg))
@@ -140,23 +180,24 @@ CONTAINS
 !> @brief This subroutine uses SOR to solve an Ax=b problem for x given A and b
 !> @param aa - A matrix
 !> @param b - RHS b vector
-!> @param x - x solution vector
-!> @param omega -
-!> @param tol_inner_x -
-!> @param tol_inner_maxit -
+!> @param xflux - scalar flux
+!> @param rank - system size
+!> @param omega - Over-relaxation factor
+!> @param tol_inner_x - Inner tolerance
+!> @param tol_inner_maxit - Number of max iterations
+!> @param core_x_size - core size in the x direction
+!> @param core_y_size - core size in the y direction
 !>
-  SUBROUTINE sor(aa, b, flux, rank, omega, tol_inner_x, tol_inner_maxit)
-    USE precisions, ONLY : ki4, kr8
-    USE globals, ONLY : core_x_size, core_y_size, num_eg, print_log
+  SUBROUTINE sor(aa, b, flux, rank, omega, tol_inner_x, tol_inner_maxit,core_x_size,core_y_size)
     IMPLICIT NONE
     ! designed for a 5-stripe matrix with the diagonal in the fifth position
-    REAL(kr8),    INTENT(in) :: aa(:,:) ! (5, rank)
-    REAL(kr8),    INTENT(in) :: b(:)    ! (rank)
-    REAL(kr8),    INTENT(inout) :: flux(:,:)    ! (rank)
-    INTEGER(ki4), INTENT(IN) :: rank
-    REAL(kr8),    INTENT(in) :: omega
-    REAL(kr8),    INTENT(in) :: tol_inner_x
-    INTEGER(ki4), INTENT(in) :: tol_inner_maxit
+    REAL(kr8),    INTENT(IN) :: aa(:,:) ! (5, rank)
+    REAL(kr8),    INTENT(IN) :: b(:)    ! (rank)
+    REAL(kr8),    INTENT(INOUT) :: flux(:,:)    ! (rank)
+    INTEGER(ki4), INTENT(IN) :: rank,core_x_size,core_y_size
+    REAL(kr8),    INTENT(IN) :: omega
+    REAL(kr8),    INTENT(IN) :: tol_inner_x
+    INTEGER(ki4), INTENT(IN) :: tol_inner_maxit
 
     INTEGER(ki4) :: i, j, iter
     INTEGER(ki4) :: cell_idx
@@ -173,7 +214,7 @@ CONTAINS
         DO i = 1,core_x_size
 
           zum = 0d0
-          cell_idx=calc_idx(i,j)
+          cell_idx=calc_idx(i,j,core_x_size)
 
           ! west
           IF (i .NE. 1)           zum = zum + aa(2,cell_idx)*flux(i-1,j)
@@ -203,26 +244,37 @@ CONTAINS
 
 !---------------------------------------------------------------------------------------------------
 !> @brief This subroutine solves the nodal problem
+!> @param core_x_size - core size in the x direction
+!> @param core_y_size - core size in the y direction
+!> @param num_eg - number of energy groups
+!> @param tol_xflux - flux convergence tolerance
+!> @param tol_xkeff - keff convergence tolerance
+!> @param xflux - scalar flux
+!> @param xkeff - eigenvalue
+!> @param tol_max_iter - maximum number of iterations
+!> @param nodal_method - nodal method option
+!> @param assm_map - assembly map
+!> @param assm_xs - assembly level cross sections
+!> @param dtilde_x - current correction cross section used in the x direction
+!> @param dtilde_y - current correction cross section used in the y direction
+!> @param h_x - node widths in the x direction
+!> @param h_y - node widths in the y direction
 !>
-  subroutine solver()
-    USE globals, ONLY : core_x_size, core_y_size, &
-      xkeff, xflux, tol_max_iter, tol_xkeff, tol_xflux
-    USE precisions, ONLY : ki4, kr8
-    USE globals, ONLY : print_log
-    USE string_module, ONLY : str
-    USE linalg_module, ONLY : norm
-    IMPLICIT NONE
-
+  subroutine solver(core_x_size,core_y_size,num_eg,tol_xflux,tol_xkeff,xflux,xkeff,tol_max_iter, &
+                    nodal_method,assm_map,assm_xs,dtilde_x,dtilde_y,h_x,h_y)
+    INTEGER, INTENT(IN) :: core_x_size,core_y_size,num_eg,tol_max_iter,assm_map(:,:)
+    REAL(kr8), INTENT(IN) :: tol_xflux,tol_xkeff,h_x(:),h_y(:)
+    REAL(kr8), INTENT(INOUT) :: xflux(:,:,:),xkeff,dtilde_x(:,:,:),dtilde_y(:,:,:)
+    CHARACTER(*), INTENT(IN) :: nodal_method
+    TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
+    !local variables
     INTEGER(ki4) :: i, j, gp, g
     INTEGER(ki4) :: iter
     REAL(kr8) :: conv_xflux, conv_xkeff,keff_old
-
-    REAL(kr8), ALLOCATABLE :: amat(:,:,:),flux_old(:,:,:) ! (core_x_size*core_y_size*num_eg, core_x_size*core_y_size*num_eg)
+    REAL(kr8), ALLOCATABLE :: amat(:,:,:),flux_old(:,:,:)
     REAL(kr8), ALLOCATABLE :: bvec(:,:)
-
     REAL(kr8) :: fiss_src_sum(2)
-
-    INTEGER :: prob_size
+    INTEGER(ki4) :: prob_size
 
     prob_size=core_x_size*core_y_size
 
@@ -232,11 +284,10 @@ CONTAINS
     ALLOCATE(bvec(prob_size,num_eg))
 
     ! TODO this will need to be done on every iteration
-    CALL build_amatrix(amat)
+    CALL build_amatrix(amat,core_x_size,core_y_size,num_eg,assm_xs,assm_map,h_x,h_y,dtilde_x, &
+                        dtilde_y)
 
     CALL print_log('Iter | Keff     | Conv_Keff | Conv_Flux')
-
-    xflux = 1d0
 
     conv_xflux = 1d2*tol_xflux + 1d0
     conv_xkeff = 1d2*tol_xkeff + 1d0
@@ -247,16 +298,16 @@ CONTAINS
     DO iter = 1,tol_max_iter
 
       ! build the bvec based on current keff and flux
-      CALL build_bvec(bvec)
+      CALL build_bvec(bvec,core_x_size,core_y_size,num_eg,assm_xs,xkeff,xflux,assm_map)
 
       ! TODO implement inner tolerances
       DO g=1,num_eg
         CALL inner_solve(inner_solve_method, prob_size, 1d-3*MIN(tol_xflux,tol_xkeff), 10000, &
-                        amat(:,:,g), bvec(:,g), xflux(:,:,g))
-        CALL add_downscatter(bvec,g)
+                        amat(:,:,g), bvec(:,g), xflux(:,:,g),core_x_size,core_y_size)
+        CALL add_downscatter(bvec,g,core_x_size,core_y_size,num_eg,assm_xs,assm_map,xflux)
       ENDDO
 
-      CALL calc_fiss_src_sum(fiss_src_sum(2))
+      fiss_src_sum(2)=calc_fiss_src_sum(core_x_size,core_y_size,num_eg,assm_map,xflux,assm_xs)
 
       IF (iter > 1) xkeff=xkeff*fiss_src_sum(2)/fiss_src_sum(1)
       conv_xkeff=ABS(xkeff-keff_old) ! absolute
@@ -281,8 +332,10 @@ CONTAINS
       CALL print_log(TRIM(str(iter,5))//'   '//TRIM(str(xkeff,6,'F'))//'   '//TRIM(str(conv_xkeff,2)) &
         //'   '//TRIM(str(conv_xflux,2)))
       IF(nodal_method .EQ. 'poly')THEN
-        CALL comp_dtilde()
-        CALL build_amatrix(amat)
+        CALL comp_dtilde(core_x_size,core_y_size,num_eg,assm_xs,assm_map,xflux,dtilde_x, &
+                        dtilde_y,h_x,h_y)
+        CALL build_amatrix(amat,core_x_size,core_y_size,num_eg,assm_xs,assm_map,h_x,h_y,dtilde_x, &
+                          dtilde_y)
       ENDIF
 
       IF ((conv_xflux < tol_xflux) .AND. (conv_xkeff < tol_xkeff)) EXIT
@@ -296,9 +349,26 @@ CONTAINS
 
   ENDSUBROUTINE solver
 
-  !amatrix builder
-  SUBROUTINE build_amatrix(amatrix)
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine builds the amatrix for the CMFD problem
+!> @param amatrix - amatrix to build
+!> @param core_x_size - core size in the x direction
+!> @param core_y_size - core size in the y direction
+!> @param num_eg - number of energy groups
+!> @param assm_xs - assembly level cross sections
+!> @param assm_map - assembly map
+!> @param h_x - node widths in the x direction
+!> @param h_y - node widths in the y direction
+!> @param dtilde_x - current correction cross section used in the x direction
+!> @param dtilde_y - current correction cross section used in the y direction
+!>
+  SUBROUTINE build_amatrix(amatrix,core_x_size,core_y_size,num_eg,assm_xs,assm_map,h_x,h_y,dtilde_x, &
+                          dtilde_y)
+    INTEGER(ki4), INTENT(IN) :: core_x_size,core_y_size,num_eg,assm_map(:,:)
+    TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
+    REAL(kr8), INTENT(IN) :: h_x(:),h_y(:),dtilde_x(:,:,:),dtilde_y(:,:,:)
     REAL(kr8), INTENT(OUT) :: amatrix(:,:,:)
+    !loca variables
     INTEGER(ki4) :: g,j,i,cell_idx
 
     ! (1   , 2   , 3    , 4     , 5   )
@@ -309,7 +379,7 @@ CONTAINS
     amatrix=0.0D0
     DO j=1,core_y_size
       DO i=1,core_x_size
-        cell_idx=calc_idx(i,j)
+        cell_idx=calc_idx(i,j,core_x_size)
         DO g=1,num_eg
           !total xs term for the base of the A matrix diagonal
           amatrix(1,cell_idx,g)=assm_xs(assm_map(i,j))%sigma_r(g)
@@ -366,45 +436,52 @@ CONTAINS
     ENDDO
   ENDSUBROUTINE build_amatrix
 
-  SUBROUTINE stripe_to_dense(stripe, dense)
-    USE globals, ONLY : num_eg, core_x_size, core_y_size
+!---------------------------------------------------------------------------------------------------
+!> @brief This converts a stripe represented amatrix to a dense amatrix
+!> @param stripe - stripe matrix to convert
+!> @param dense - dense matrix that is converted to
+!> @param core_x_size - core size in the x direction
+!> @param core_y_size - core size in the y direction
+!>
+  SUBROUTINE stripe_to_dense(stripe, dense,core_x_size,core_y_size)
     REAL(kr8), INTENT(IN)  :: stripe(:,:)
+    INTEGER(ki4) :: core_x_size,core_y_size
     REAL(kr8), INTENT(OUT) :: dense(:,:)
 
-    INTEGER :: i, j
-    INTEGER :: cell_idx, neigh_idx
+    INTEGER(ki4) :: i, j
+    INTEGER(ki4) :: cell_idx, neigh_idx
 
     dense = 0d0
 
     DO j = 1,core_y_size
       DO i = 1,core_x_size
 
-        cell_idx=calc_idx(i,j)
+        cell_idx=calc_idx(i,j,core_x_size)
 
         ! self
         dense(cell_idx,cell_idx) = stripe(1,cell_idx)
 
         ! west
         IF (i .NE. 1) THEN
-          neigh_idx=calc_idx(i-1,j)
+          neigh_idx=calc_idx(i-1,j,core_x_size)
           dense(cell_idx,neigh_idx) = stripe(2,cell_idx)
         ENDIF
 
         ! east
         IF (i .NE. core_x_size) THEN
-          neigh_idx=calc_idx(i+1,j)
+          neigh_idx=calc_idx(i+1,j,core_x_size)
           dense(cell_idx,neigh_idx) = stripe(3,cell_idx)
         ENDIF
 
         ! south
         IF (j .NE. 1) THEN
-          neigh_idx=calc_idx(i,j-1)
+          neigh_idx=calc_idx(i,j-1,core_x_size)
           dense(cell_idx,neigh_idx) = stripe(4,cell_idx)
         ENDIF
 
         ! north
         IF (j .NE. core_y_size) THEN
-          neigh_idx=calc_idx(i,j+1)
+          neigh_idx=calc_idx(i,j+1,core_x_size)
           dense(cell_idx,neigh_idx) = stripe(5,cell_idx)
         ENDIF
 
@@ -414,12 +491,22 @@ CONTAINS
     RETURN
   ENDSUBROUTINE stripe_to_dense
 
-  ! solve inner linear system of equations (allows switching solver)
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine solves inner linear system of equations (allows switching solvers)
+!> @param method - linear solver method to use
+!> @param rank - system size
+!> @param tol_inner_x - Inner tolerance
+!> @param tol_inner_maxit - Number of max iterations
+!> @param amat - A matrix
+!> @param bvec - RHS b vector
+!> @param flux - scalar flux
+!> @param core_x_size - core size in the x direction
+!> @param core_y_size - core size in the y direction
+!>
   SUBROUTINE inner_solve(method, rank, tol_inner_x, tol_inner_maxit, &
-                         amat, bvec, flux)
-    USE globals, ONLY : num_eg, core_x_size, core_y_size
+                         amat, bvec, flux,core_x_size,core_y_size)
     CHARACTER(*), INTENT(IN)    :: method
-    INTEGER,      INTENT(IN)    :: rank
+    INTEGER,      INTENT(IN)    :: rank,core_x_size,core_y_size
     REAL(kr8),    INTENT(IN)    :: tol_inner_x
     INTEGER,      INTENT(IN)    :: tol_inner_maxit
     REAL(kr8),    INTENT(IN)    :: amat(:,:)
@@ -428,29 +515,29 @@ CONTAINS
 
     ! for dgesv
     REAL(kr8), ALLOCATABLE :: atemp(:,:)
-    INTEGER(kr4), ALLOCATABLE :: ipiv(:)
-    INTEGER :: ierr
-    INTEGER :: cell_idx
-    INTEGER :: i, j
+    INTEGER(ki4), ALLOCATABLE :: ipiv(:)
+    INTEGER(ki4) :: ierr
+    INTEGER(ki4) :: cell_idx
+    INTEGER(ki4) :: i, j
 
     SELECT CASE (method)
       CASE ('dgesv')
         ALLOCATE(atemp(rank,rank))
         ALLOCATE(ipiv(rank))
-        call stripe_to_dense(amat, atemp)
+        call stripe_to_dense(amat, atemp,core_x_size,core_y_size)
         CALL DGESV(rank,1,atemp,rank,ipiv,bvec,rank,ierr)
         IF(ierr .NE. 0)CALL fatal_error('DGESV failed')
         !assign xflux to the new bvec
         DO j=1,core_y_size
           DO i=1,core_x_size
-            cell_idx=calc_idx(i,j)
+            cell_idx=calc_idx(i,j,core_x_size)
             flux(i,j)=MAX(bvec(cell_idx),0d0)
           ENDDO
         ENDDO
         DEALLOCATE(atemp, ipiv)
       CASE ('sor')
         ! TODO set omega better than this
-        CALL sor(amat, bvec, flux, rank, 1.2d0, tol_inner_x, tol_inner_maxit)
+        CALL sor(amat, bvec, flux, rank, 1.2d0, tol_inner_x, tol_inner_maxit,core_x_size,core_y_size)
       CASE DEFAULT
         call fatal_error('selected inner_solve method not implemented')
     ENDSELECT
@@ -458,15 +545,29 @@ CONTAINS
     RETURN
   ENDSUBROUTINE inner_solve
 
-  !bvector builder for current flux
-  SUBROUTINE build_bvec(bvec)
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine builds the bvector for current flux (sans downscattering)
+!> @param bvec - RHS b vector
+!> @param core_x_size - core size in the x direction
+!> @param core_y_size - core size in the y direction
+!> @param num_eg - number of energy groups
+!> @param assm_xs - assembly level cross sections
+!> @param xkeff - eigenvalue
+!> @param xflux - scalar flux
+!> @param assm_map - assembly map
+!>
+  SUBROUTINE build_bvec(bvec,core_x_size,core_y_size,num_eg,assm_xs,xkeff,xflux,assm_map)
     REAL(kr8), INTENT(OUT) :: bvec(:,:)
+    REAL(kr8), INTENT(IN) :: xkeff,xflux(:,:,:)
+    INTEGER(ki4), INTENT(IN) :: core_x_size,core_y_size,num_eg,assm_map(:,:)
+    TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
+    !local variables
     INTEGER(ki4) :: i,j,g,gp,cell_idx,loc_id
     REAL(kr8) :: fiss_src
     bvec=0.0D0
     DO j=1,core_y_size
       DO i=1,core_x_size
-        cell_idx=calc_idx(i,j)
+        cell_idx=calc_idx(i,j,core_x_size)
         !compute fission source for this cell
         loc_id=assm_map(i,j)
         fiss_src=0.0D0
@@ -485,14 +586,27 @@ CONTAINS
     ENDDO
   ENDSUBROUTINE build_bvec
 
-  !add downscatter from the just solved group
-  SUBROUTINE add_downscatter(bvec,gin)
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine adds downscatter from the just solved group to the bvector
+!> @param bvec - RHS b vector
+!> @param gin - group we are scattering from to get the added downscattering
+!> @param core_x_size - core size in the x direction
+!> @param core_y_size - core size in the y direction
+!> @param num_eg - number of energy groups
+!> @param assm_xs - assembly level cross sections
+!> @param assm_map - assembly map
+!> @param xflux - scalar flux
+!>
+  SUBROUTINE add_downscatter(bvec,gin,core_x_size,core_y_size,num_eg,assm_xs,assm_map,xflux)
     REAL(kr8), INTENT(INOUT) :: bvec(:,:)
-    INTEGER(ki4),INTENT(IN) :: gin
+    REAL(kr8), INTENT(IN) :: xflux(:,:,:)
+    INTEGER(ki4), INTENT(IN) :: gin,core_x_size,core_y_size,num_eg,assm_map(:,:)
+    TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
+    !local variables
     INTEGER(ki4) :: i,j,g,cell_idx,loc_id
     DO j=1,core_y_size
       DO i=1,core_x_size
-        cell_idx=calc_idx(i,j)
+        cell_idx=calc_idx(i,j,core_x_size)
         loc_id=assm_map(i,j)
         DO g=gin+1,num_eg
           !add down-scattering source
@@ -502,32 +616,84 @@ CONTAINS
     ENDDO
   ENDSUBROUTINE add_downscatter
 
-  !fission source calculator
-  SUBROUTINE calc_fiss_src_sum(fiss_src)
-    REAL(kr8), INTENT(OUT) :: fiss_src
+!---------------------------------------------------------------------------------------------------
+!> @brief This function calculates the fission source
+!> @param core_x_size - core size in the x direction
+!> @param core_y_size - core size in the y direction
+!> @param num_eg - number of energy groups
+!> @param assm_map - assembly map
+!> @param xflux - scalar flux
+!> @param assm_xs - assembly level cross sections
+!>
+  REAL(kr8) FUNCTION calc_fiss_src_sum(core_x_size,core_y_size,num_eg,assm_map,xflux,assm_xs)
+    REAL(kr8), INTENT(IN) :: xflux(:,:,:)
+    INTEGER(ki4), INTENT(IN) :: core_x_size,core_y_size,num_eg,assm_map(:,:)
+    TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
+    !local variables
     INTEGER(ki4) :: i,j,gp,loc_id
-    fiss_src=0.0D0
+    calc_fiss_src_sum=0.0D0
     DO gp=1,num_eg
       DO j=1,core_y_size
         DO i=1,core_x_size
           loc_id=assm_map(i,j)
-          fiss_src=fiss_src+xflux(i,j,gp)*assm_xs(loc_id)%nusigma_f(gp)
+          calc_fiss_src_sum=calc_fiss_src_sum+xflux(i,j,gp)*assm_xs(loc_id)%nusigma_f(gp)
         ENDDO ! i = 1,core_x_size
       ENDDO ! j = 1,core_y_size
     ENDDO ! gp = 1,num_eg
-  ENDSUBROUTINE calc_fiss_src_sum
+  ENDFUNCTION calc_fiss_src_sum
 
-  SUBROUTINE comp_dtilde()
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine calculates dtilde
+!> @param core_x_size - core size in the x direction
+!> @param core_y_size - core size in the y direction
+!> @param num_eg - number of energy groups
+!> @param assm_xs - assembly level cross sections
+!> @param assm_map - assembly map
+!> @param xflux - scalar flux
+!> @param dtilde_x - current correction cross section used in the x direction
+!> @param dtilde_y - current correction cross section used in the y direction
+!> @param h_x - node widths in the x direction
+!> @param h_y - node widths in the y direction
+!>
+  SUBROUTINE comp_dtilde(core_x_size,core_y_size,num_eg,assm_xs,assm_map,xflux,dtilde_x, &
+                          dtilde_y,h_x,h_y)
+    INTEGER, INTENT(IN) :: core_x_size,core_y_size,num_eg,assm_map(:,:)
+    REAL(kr8), INTENT(IN) :: xflux(:,:,:),h_x(:),h_y(:)
+    REAL(kr8), INTENT(INOUT) :: dtilde_x(:,:,:),dtilde_y(:,:,:)
+    TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
+    !local variables
     REAL(kr8) :: s_bar_x(core_x_size,core_y_size,num_eg),s_bar_y(core_x_size,core_y_size,num_eg)
-    CALL comp_s(s_bar_x,s_bar_y)
+    CALL comp_s(s_bar_x,s_bar_y,core_x_size,core_y_size,num_eg,assm_xs,assm_map,xflux,dtilde_x, &
+                dtilde_y,h_x,h_y)
     STOP 'comp_dtilde not yet complete'
   ENDSUBROUTINE comp_dtilde
 
-  SUBROUTINE comp_s(s_bar_x,s_bar_y)
-    REAL(kr8),INTENT(OUT) :: s_bar_x(:,:,:),s_bar_y(:,:,:)
+!---------------------------------------------------------------------------------------------------
+!> @brief This subroutine the sbar values
+!> @param s_bar_x - sbar in the x direction
+!> @param s_bar_y - sbar in the y direction
+!> @param core_x_size - core size in the x direction
+!> @param core_y_size - core size in the y direction
+!> @param num_eg - number of energy groups
+!> @param assm_xs - assembly level cross sections
+!> @param assm_map - assembly map
+!> @param xflux - scalar flux
+!> @param dtilde_x - current correction cross section used in the x direction
+!> @param dtilde_y - current correction cross section used in the y direction
+!> @param h_x - node widths in the x direction
+!> @param h_y - node widths in the y direction
+!>
+  SUBROUTINE comp_s(s_bar_x,s_bar_y,core_x_size,core_y_size,num_eg,assm_xs,assm_map,xflux,dtilde_x, &
+                    dtilde_y,h_x,h_y)
+    INTEGER, INTENT(IN) :: core_x_size,core_y_size,num_eg,assm_map(:,:)
+    REAL(kr8), INTENT(IN) :: xflux(:,:,:),h_x(:),h_y(:)
+    REAL(kr8), INTENT(INOUT) :: dtilde_x(:,:,:),dtilde_y(:,:,:)
+    TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
+    !local variables
+    REAL(kr8), INTENT(OUT) :: s_bar_x(:,:,:),s_bar_y(:,:,:)
     REAL(kr8) :: j_x(core_x_size+1,core_y_size,num_eg),j_y(core_x_size,core_y_size+1,num_eg)
     REAL(kr8) :: l_bar_x(core_x_size,core_y_size,num_eg),l_bar_y(core_x_size,core_y_size,num_eg)
-    INTEGER :: i,j,g
+    INTEGER(ki4) :: i,j,g
 
     !compute x direction currents at each face
     j_x=0.0D0
