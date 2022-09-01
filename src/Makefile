@@ -41,7 +41,7 @@ BLIBS = -llapack -lblas
 #-----------------------------------------------------------------------------------
 .PHONY: all debug catch coverage clean reset
 
-EXEC_NAME=$(EXE)$(TYPE)$(EXT)
+EXEC_NAME=$(EXE)
 EXEC_FILE=../$(EXEC_NAME)
 
 all: $(EXEC_FILE)
@@ -66,7 +66,7 @@ reset : clean
 
 #Executable rule
 $(EXEC_FILE): $(OBJ)
-	$(FC) -o $@ $(OPT) $^ $(BLIBS)
+	$(FC) -o $@$(TYPE)$(EXT) $(OPT) $^ $(BLIBS)
 
 #-----------------------------------------------------------------------------------
 #Dependency List
