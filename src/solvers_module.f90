@@ -261,9 +261,9 @@ CONTAINS
 !> @param h_y - node widths in the y direction
 !>
   subroutine solver(core_x_size,core_y_size,num_eg,tol_xflux,tol_xkeff,xflux,xkeff,tol_max_iter, &
-                    nodal_method,assm_map,assm_xs,dtilde_x,dtilde_y,h_x,h_y)
+                    nodal_method,assm_map,assm_xs,dtilde_x,dtilde_y,h_x,h_y,dl_weilandt)
     INTEGER, INTENT(IN) :: core_x_size,core_y_size,num_eg,tol_max_iter,assm_map(:,:)
-    REAL(kr8), INTENT(IN) :: tol_xflux,tol_xkeff,h_x(:),h_y(:)
+    REAL(kr8), INTENT(IN) :: tol_xflux,tol_xkeff,h_x(:),h_y(:),dl_weilandt
     REAL(kr8), INTENT(INOUT) :: xflux(:,:,:),xkeff,dtilde_x(:,:,:),dtilde_y(:,:,:)
     CHARACTER(*), INTENT(IN) :: nodal_method
     TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)

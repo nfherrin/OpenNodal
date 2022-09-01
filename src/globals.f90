@@ -20,9 +20,6 @@ MODULE globals
   !> it's pi
   REAL(kr8),PARAMETER :: pi=4*ATAN(1.d0)
 
-  !> Weilandt shift value
-  REAL(kr8) :: dl_weilandt=-1.0D0
-
 CONTAINS
 
 !---------------------------------------------------------------------------------------------------
