@@ -289,7 +289,8 @@ CONTAINS
       CALL print_log(TRIM(str(iter,5))//'   '//TRIM(str(xkeff,6,'F'))//'   '//TRIM(str(conv_xkeff,2)) &
         //'   '//TRIM(str(conv_xflux,2)))
       IF(nodal_method .EQ. 'poly')THEN
-        CALL comp_dtilde()
+        CALL comp_dtilde(core_x_size,core_y_size,num_eg,assm_xs,assm_map,xflux,dtilde_x, &
+                        dtilde_y,h_x,h_y)
         CALL build_amatrix(amat,core_x_size,core_y_size,num_eg,assm_xs,assm_map,h_x,h_y,dtilde_x, &
                           dtilde_y)
       ENDIF
@@ -540,118 +541,131 @@ CONTAINS
     ENDDO ! gp = 1,num_eg
   ENDFUNCTION calc_fiss_src_sum
 
-  SUBROUTINE comp_dtilde()
-    ! REAL(kr8) :: s_bar_x(core_x_size,core_y_size,num_eg),s_bar_y(core_x_size,core_y_size,num_eg)
-    ! CALL comp_s(s_bar_x,s_bar_y)
-    ! STOP 'comp_dtilde not yet complete'
+  SUBROUTINE comp_dtilde(core_x_size,core_y_size,num_eg,assm_xs,assm_map,xflux,dtilde_x, &
+                          dtilde_y,h_x,h_y)
+    INTEGER, INTENT(IN) :: core_x_size,core_y_size,num_eg,assm_map(:,:)
+    REAL(kr8), INTENT(IN) :: xflux(:,:,:),h_x(:),h_y(:)
+    REAL(kr8), INTENT(INOUT) :: dtilde_x(:,:,:),dtilde_y(:,:,:)
+    TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
+    !local variables
+    REAL(kr8) :: s_bar_x(core_x_size,core_y_size,num_eg),s_bar_y(core_x_size,core_y_size,num_eg)
+    CALL comp_s(s_bar_x,s_bar_y,core_x_size,core_y_size,num_eg,assm_xs,assm_map,xflux,dtilde_x, &
+                dtilde_y,h_x,h_y)
+    STOP 'comp_dtilde not yet complete'
   ENDSUBROUTINE comp_dtilde
 
-  SUBROUTINE comp_s(s_bar_x,s_bar_y)
+  SUBROUTINE comp_s(s_bar_x,s_bar_y,core_x_size,core_y_size,num_eg,assm_xs,assm_map,xflux,dtilde_x, &
+                    dtilde_y,h_x,h_y)
+    INTEGER, INTENT(IN) :: core_x_size,core_y_size,num_eg,assm_map(:,:)
+    REAL(kr8), INTENT(IN) :: xflux(:,:,:),h_x(:),h_y(:)
+    REAL(kr8), INTENT(INOUT) :: dtilde_x(:,:,:),dtilde_y(:,:,:)
+    TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
+    !local variables
     REAL(kr8),INTENT(OUT) :: s_bar_x(:,:,:),s_bar_y(:,:,:)
-    ! REAL(kr8) :: j_x(core_x_size+1,core_y_size,num_eg),j_y(core_x_size,core_y_size+1,num_eg)
-    ! REAL(kr8) :: l_bar_x(core_x_size,core_y_size,num_eg),l_bar_y(core_x_size,core_y_size,num_eg)
-    ! INTEGER :: i,j,g
+    REAL(kr8) :: j_x(core_x_size+1,core_y_size,num_eg),j_y(core_x_size,core_y_size+1,num_eg)
+    REAL(kr8) :: l_bar_x(core_x_size,core_y_size,num_eg),l_bar_y(core_x_size,core_y_size,num_eg)
+    INTEGER :: i,j,g
 
-    ! !compute x direction currents at each face
-    ! j_x=0.0D0
-    ! DO i=1,core_x_size+1
-    !   DO j=1,core_y_size
-    !     DO g=1,num_eg
-    !       IF(i .EQ. 1)THEN
-    !         j_x(i,j,g)=-dtilde_x(i,j,g)*xflux(i,j,g)
-    !       ELSEIF(i .EQ. core_x_size+1)THEN
-    !         j_x(i,j,g)=dtilde_x(i,j,g)*xflux(i-1,j,g)
-    !       ELSE !not a boundary
-    !         j_x(i,j,g)=2.0D0*(h_x(i-1)/assm_xs(assm_map(i-1,j))%D(g)&
-    !           +h_x(i)/assm_xs(assm_map(i,j))%D(g))*(xflux(i-1,j,g)-xflux(i,j,g))&
-    !           +dtilde_x(i,j,g)*(xflux(i-1,j,g)+xflux(i,j,g))
-    !       ENDIF
-    !     ENDDO
-    !   ENDDO
-    ! ENDDO
-    ! !compute y direction currents at each face
-    ! j_y=0.0D0
-    ! DO i=1,core_x_size
-    !   DO j=1,core_y_size+1
-    !     DO g=1,num_eg
-    !       IF(j .EQ. 1)THEN
-    !         j_y(i,j,g)=-dtilde_y(i,j,g)*xflux(i,j,g)
-    !       ELSEIF(j .EQ. core_y_size+1)THEN
-    !         j_y(i,j,g)=dtilde_y(i,j,g)*xflux(i,j-1,g)
-    !       ELSE !not a boundary
-    !         j_y(i,j,g)=2.0D0*(h_y(j-1)/assm_xs(assm_map(i,j-1))%D(g)&
-    !           +h_y(j)/assm_xs(assm_map(i,j))%D(g))*(xflux(i,j-1,g)-xflux(i,j,g))&
-    !           +dtilde_y(i,j,g)*(xflux(i,j-1,g)+xflux(i,j,g))
-    !       ENDIF
-    !     ENDDO
-    !   ENDDO
-    ! ENDDO
+    !compute x direction currents at each face
+    j_x=0.0D0
+    DO i=1,core_x_size+1
+      DO j=1,core_y_size
+        DO g=1,num_eg
+          IF(i .EQ. 1)THEN
+            j_x(i,j,g)=-dtilde_x(i,j,g)*xflux(i,j,g)
+          ELSEIF(i .EQ. core_x_size+1)THEN
+            j_x(i,j,g)=dtilde_x(i,j,g)*xflux(i-1,j,g)
+          ELSE !not a boundary
+            j_x(i,j,g)=2.0D0*(h_x(i-1)/assm_xs(assm_map(i-1,j))%D(g)&
+              +h_x(i)/assm_xs(assm_map(i,j))%D(g))*(xflux(i-1,j,g)-xflux(i,j,g))&
+              +dtilde_x(i,j,g)*(xflux(i-1,j,g)+xflux(i,j,g))
+          ENDIF
+        ENDDO
+      ENDDO
+    ENDDO
+    !compute y direction currents at each face
+    j_y=0.0D0
+    DO i=1,core_x_size
+      DO j=1,core_y_size+1
+        DO g=1,num_eg
+          IF(j .EQ. 1)THEN
+            j_y(i,j,g)=-dtilde_y(i,j,g)*xflux(i,j,g)
+          ELSEIF(j .EQ. core_y_size+1)THEN
+            j_y(i,j,g)=dtilde_y(i,j,g)*xflux(i,j-1,g)
+          ELSE !not a boundary
+            j_y(i,j,g)=2.0D0*(h_y(j-1)/assm_xs(assm_map(i,j-1))%D(g)&
+              +h_y(j)/assm_xs(assm_map(i,j))%D(g))*(xflux(i,j-1,g)-xflux(i,j,g))&
+              +dtilde_y(i,j,g)*(xflux(i,j-1,g)+xflux(i,j,g))
+          ENDIF
+        ENDDO
+      ENDDO
+    ENDDO
 
-    ! !!x direction currents
-    ! !write(*,*)'j_x'
-    ! !DO j=1,core_y_size
-    ! !  WRITE(*,'(10000ES16.8)')j_x(:,j,1)
-    ! !ENDDO
-    ! !!y direction currents
-    ! !write(*,*)'j_y'
-    ! !DO j=1,core_y_size+1
-    ! !  WRITE(*,'(10000ES16.8)')j_y(:,j,1)
-    ! !ENDDO
+    !!x direction currents
+    !write(*,*)'j_x'
+    !DO j=1,core_y_size
+    !  WRITE(*,'(10000ES16.8)')j_x(:,j,1)
+    !ENDDO
+    !!y direction currents
+    !write(*,*)'j_y'
+    !DO j=1,core_y_size+1
+    !  WRITE(*,'(10000ES16.8)')j_y(:,j,1)
+    !ENDDO
 
-    ! !compute l_bar_x values
-    ! DO i=1,core_x_size
-    !   DO j=1,core_y_size
-    !     DO g=1,num_eg
-    !       l_bar_x(i,j,g)=j_x(i+1,j,g)-j_x(i,j,g)
-    !     ENDDO
-    !   ENDDO
-    ! ENDDO
-    ! !compute l_bar_y values
-    ! DO i=1,core_x_size
-    !   DO j=1,core_y_size
-    !     DO g=1,num_eg
-    !       l_bar_y(i,j,g)=j_y(i,j+1,g)-j_y(i,j,g)
-    !     ENDDO
-    !   ENDDO
-    ! ENDDO
+    !compute l_bar_x values
+    DO i=1,core_x_size
+      DO j=1,core_y_size
+        DO g=1,num_eg
+          l_bar_x(i,j,g)=j_x(i+1,j,g)-j_x(i,j,g)
+        ENDDO
+      ENDDO
+    ENDDO
+    !compute l_bar_y values
+    DO i=1,core_x_size
+      DO j=1,core_y_size
+        DO g=1,num_eg
+          l_bar_y(i,j,g)=j_y(i,j+1,g)-j_y(i,j,g)
+        ENDDO
+      ENDDO
+    ENDDO
 
-    ! !!x direction l
-    ! !write(*,*)'l_x'
-    ! !DO j=1,core_y_size
-    ! ! WRITE(*,'(10000ES16.8)')l_bar_x(:,j,1)
-    ! !ENDDO
-    ! !!y direction l
-    ! !write(*,*)'l_y'
-    ! !DO j=1,core_y_size
-    ! ! WRITE(*,'(10000ES16.8)')l_bar_y(:,j,1)
-    ! !ENDDO
+    !!x direction l
+    !write(*,*)'l_x'
+    !DO j=1,core_y_size
+    ! WRITE(*,'(10000ES16.8)')l_bar_x(:,j,1)
+    !ENDDO
+    !!y direction l
+    !write(*,*)'l_y'
+    !DO j=1,core_y_size
+    ! WRITE(*,'(10000ES16.8)')l_bar_y(:,j,1)
+    !ENDDO
 
-    ! !compute s_bar_x values
-    ! DO i=1,core_x_size
-    !   DO j=1,core_y_size
-    !     DO g=1,num_eg
-    !       s_bar_x(i,j,g)=l_bar_y(i,j,g)/h_y(j)
-    !     ENDDO
-    !   ENDDO
-    ! ENDDO
-    ! !compute s_bar_y values
-    ! DO i=1,core_x_size
-    !   DO j=1,core_y_size
-    !     DO g=1,num_eg
-    !       s_bar_y(i,j,g)=l_bar_x(i,j,g)/h_x(i)
-    !     ENDDO
-    !   ENDDO
-    ! ENDDO
+    !compute s_bar_x values
+    DO i=1,core_x_size
+      DO j=1,core_y_size
+        DO g=1,num_eg
+          s_bar_x(i,j,g)=l_bar_y(i,j,g)/h_y(j)
+        ENDDO
+      ENDDO
+    ENDDO
+    !compute s_bar_y values
+    DO i=1,core_x_size
+      DO j=1,core_y_size
+        DO g=1,num_eg
+          s_bar_y(i,j,g)=l_bar_x(i,j,g)/h_x(i)
+        ENDDO
+      ENDDO
+    ENDDO
 
-    ! !x direction l
-    ! write(*,*)'s_x'
-    ! DO j=1,core_y_size
-    !   WRITE(*,'(10000ES16.8)')s_bar_x(:,j,1)
-    ! ENDDO
-    ! !y direction l
-    ! write(*,*)'s_y'
-    ! DO j=1,core_y_size
-    !   WRITE(*,'(10000ES16.8)')s_bar_y(:,j,1)
-    ! ENDDO
+    !x direction l
+    write(*,*)'s_x'
+    DO j=1,core_y_size
+      WRITE(*,'(10000ES16.8)')s_bar_x(:,j,1)
+    ENDDO
+    !y direction l
+    write(*,*)'s_y'
+    DO j=1,core_y_size
+      WRITE(*,'(10000ES16.8)')s_bar_y(:,j,1)
+    ENDDO
   ENDSUBROUTINE comp_s
 ENDMODULE solvers_module
