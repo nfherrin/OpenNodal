@@ -51,7 +51,7 @@ CONTAINS
     IF(num_eg .EQ. 2)WRITE(out_unit,'(A,F21.16)')'Final 2G Flux Ratio = ',SUM(xflux(:,:,2))/SUM(xflux(:,:,1))
 
     DO g=1,num_eg
-      WRITE(out_unit,'(A,I0)')'Node Averaged Flux G = ',g
+      WRITE(out_unit,'(A,I0)')'Asssembly Averaged Flux G = ',g
       DO j=1,core_y_size,nsplit
         DO i=1,core_x_size,nsplit
           WRITE(out_unit,'(ES24.16)',ADVANCE='NO')SUM(xflux(i:i+nsplit-1,j:j+nsplit-1,g))/(1.0D0*nsplit**2)
