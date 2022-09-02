@@ -75,6 +75,8 @@ CONTAINS
       ENDIF
     ENDDO
 
+    prefix = ''
+    RETURN
   ENDSUBROUTINE get_prefix
 
 !---------------------------------------------------------------------------------------------------
