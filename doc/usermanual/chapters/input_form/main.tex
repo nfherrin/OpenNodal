@@ -8,8 +8,8 @@ OpenNodal currently features the following three blocks:
   \begin{tabular}{|l|l|}
     \hline
     \multicolumn{1}{|c|}{{\ul \textbf{Block Name}}} & \multicolumn{1}{c|}{{\ul \textbf{Available Cards}}} \\ \hline
-    \verb"[CASE_DETAILS]" & \verb"title", \verb"nsplit", \verb"k_eps", \verb"phi_eps", \verb"max_its", and \verb"nodal_method" \\ \hline
-    \verb"[CORE]" & \verb"dim", \verb"size", \verb"apitch", \verb"sym", \verb"assm_map", \verb"bc", and \verb"refl_mat" \\ \hline
+    \verb"[CASE_DETAILS]" & \verb"title", \verb"nsplit", \verb"k_eps", \verb"phi_eps", \verb"max_its", \verb"nodal_method", and \verb"wielandt" \\ \hline
+    \verb"[CORE]" & \verb"dim", \verb"size", \verb"apitch", \verb"sym", \verb"assm_map", \verb"bc", \verb"refl_mat", and \verb"buckling" \\ \hline
     \verb"[MATERIAL]" & \verb"xs_file" and \verb"xs_map" \\ \hline
   \end{tabular}
 \end{table}
@@ -24,7 +24,7 @@ The following table describes the available input cards:
     \hline
     \multicolumn{1}{|c|}{{\ul \textbf{Card Name}}} & \multicolumn{1}{c|}{{\ul \textbf{Description}}} & \multicolumn{1}{c|}{{\ul \textbf{Options}}} & \multicolumn{1}{c|}{{\ul \textbf{Required?}}} \\ \hline
     \verb"title"  & Problem Title. & String of size $\leq 100$ & No. Default: blank \\ \hline
-    \verb"nsplit" & Spatial Refinement for nodes. Splits each assembly in the specified geometry into $nsplit\times nsplit$ nodes. & $\integer\geq 1$ & No. Default: \verb"1" \\ \hline
+    \verb"nsplit" & Spatial Refinement for nodes. Splits each assembly in the specified geometry into \verb"nsplit"$\times$\verb"nsplit" nodes. & $\integer\geq 1$ & No. Default: \verb"1" \\ \hline
     \verb"k_eps" & Eigenvalue convergence criteria. & $\real> 0$ & No. Default: \verb"1.0E-6" \\ \hline
     \verb"phi_eps" & Flux convergence criteria. & $\real> 0$ & No. Default: \verb"1.0E-5" \\ \hline
     \verb"max_its" & Maximum number of outer iterations. & $\integer\geq 1$ & No. Default: \verb"100" \\ \hline
@@ -73,8 +73,9 @@ The following table describes the available input cards:
     \verb"xs_file" & Cross section filename. Can include the path to the file for a cross sections file not in the same directory. & String of size $\leq 200$ & Yes. \\ \hline
     \verb"xs_map" & The mapping for cross section identifiers to assembly IDs as well as specifications about macro or micro cross sections. Currently ONLY macro cross sections are supported.
     The card should be followed with the number of assembly IDs to map onto on the same line. This number should at least equal the maximum assembly ID in the \verb"assm_map".
-    On each following line the assembly cross section mapping should be given as \verb"ID macro/micro XSid" counting from assembly \verb"ID" from 1 up to the number of IDs to map. & $\integer$ \newline
-    $\integer$ \verb"macro XSid"\newline
+    On each following line the assembly cross section mapping should be given as \verb"ID macro/micro XSid" counting from assembly \verb"ID" from 1 up to the number of IDs to map. & $\integer\geq 1$ \newline
+    $1$ \verb"macro <XSid>"\newline
+    $2$ \verb"macro <XSid>"\newline
     $\vdots$ & Yes. \\ \hline
   \end{tabular}
 \end{table}
