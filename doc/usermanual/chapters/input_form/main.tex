@@ -80,3 +80,36 @@ The following table describes the available input cards:
 \end{table}
 
 \section{Cross Section Input File}
+
+The OpenNodal cross section file contains all cross section data for an OpenNodal calculation.
+Currently, only macroscopic cross sections are supported, so only the description for them will be given.
+The following is the order of the data as it appears in the cross section file (note that blank lines between blocks are ignored):
+\begin{verbatim}
+Line 1: OpenNodal_ASSY-XS_V1 <num_mats> <G>
+Block 1: Each entry in this block contains cross sections for a single material.
+Each block contains G+5 lines. There are num_mats blocks.
+Entry line 1: id <XSid>
+Entry line 2: diffusion_coefficient_1 diffusion_coefficient_2... diffusion_coefficient_G
+Entry line 2: fission_spectrum_1 fission_spectrum_2... fission_spectrum_G
+Entry line 3: nuSigma_f_1 nuSigma_f_2 nuSigma_f_3... nuSigma_f_G
+Entry line 4: nu_bar_1 nu_bar_2... nu_bar_G
+Entry line 5: Sigma_a_1 Sigma_a_2... Sigma_a_G
+Entry line 6: sig_scat_{1->1} sig_scat_{2->1}... sig_scat_{G->1}
+Entry line 7: sig_scat_{1->2} sig_scat_{2->2}... sig_scat_{G->2}
+        :
+Entry line G+5: sig_scat_{1->G} sig_scat_{2->G}... sig_scat_{G->G}
+        :
+\end{verbatim}
+
+Where:
+\begin{itemize}
+\item \verb"num_mats" = Total number of cross section materials (presumably homogenized assemblies). There should be this many blocks.
+\item \verb"G" = Total number of energy groups.
+\item \verb"XSid" = ID of the material. Used in identifying the material and region mapping. Not limited to integers, can be a general string.
+\item \verb"diffusion_coefficient_g" = Diffusion coefficient in energy group $g$ ($D$).
+\item \verb"fission_spectrum_g" = Fraction of neutrons born in fission that appear in energy group $g$ ($\chi$).
+\item \verb"nuSigma_f_g" = Fission production cross section in group $g$ ($\nu\Sigma_f$ NOT $\Sigma_f$).
+\item \verb"nu_bar_g" = Average number of neutrons released by fission caused by a neutron in energy group $g$ ($\nu$).
+\item \verb"Sigma_a_g" = Absorption cross section in energy group $g$ ($\Sigma_a$).
+\item \verb"sig_scat_{g'->g}" = Scattering cross section from group $g'$ to $g$ ($\Sigma_{s,g'\rightarrow g}$).
+\end{itemize}
