@@ -28,10 +28,10 @@ MODULE input_module
 
   !variables to be used to gather data for the variables in main, also the defaults
   INTEGER(ki4) :: p_d=2                           !prob_dim
-  INTEGER(ki4) :: c_s=0                           !core_size
-  INTEGER(ki4) :: x_s=0                           !core_x_size
-  INTEGER(ki4) :: y_s=0                           !core_y_size
-  REAL(kr8) :: a_p=0                              !assm_pitch
+  INTEGER(ki4) :: c_s=1                           !core_size
+  INTEGER(ki4) :: x_s=1                           !core_x_size
+  INTEGER(ki4) :: y_s=1                           !core_y_size
+  REAL(kr8) :: a_p=1.0D0                              !assm_pitch
   CHARACTER(100) :: p_s='full'                    !prob_sym
   INTEGER(ki4), ALLOCATABLE :: a_m(:,:)           !assm_map
   REAL(kr8), ALLOCATABLE :: d_x(:)                !h_x
