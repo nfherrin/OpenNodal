@@ -51,7 +51,7 @@ CONTAINS
     IF(num_eg .EQ. 2)WRITE(out_unit,'(A,F21.16)')'Final 2G Flux Ratio = ',SUM(xflux(:,:,2))/SUM(xflux(:,:,1))
 
     DO g=1,num_eg
-      WRITE(out_unit,'(A,I0)')'Node Averaged Flux G = ',g
+      WRITE(out_unit,'(A,I0)')'Asssembly Averaged Flux G = ',g
       DO j=1,core_y_size,nsplit
         DO i=1,core_x_size,nsplit
           WRITE(out_unit,'(ES24.16)',ADVANCE='NO')SUM(xflux(i:i+nsplit-1,j:j+nsplit-1,g))/(1.0D0*nsplit**2)
@@ -111,7 +111,7 @@ CONTAINS
       CLOSE(out_unit)
     ENDDO
 
-    WRITE(t_char,'(A)')TRIM(prob_title)//'_fiss_src.csv'
+    WRITE(t_char,'(A)')TRIM(prob_title)//'_power.csv'
     OPEN(UNIT=out_unit, FILE=t_char, STATUS='REPLACE', ACTION = "WRITE", IOSTAT=t_int, IOMSG=t_char)
     IF(t_int .NE. 0)THEN
       CALL fatal_error(t_char)
@@ -179,15 +179,15 @@ CONTAINS
     !output the plot commands
     WRITE(out_unit_temp,'(A)')'# plot.plt'
     WRITE(out_unit_temp,'(A)')'set term png'
-    WRITE(out_unit_temp,'(A)')'set output "'//TRIM(prob_title)//'_fiss_src.png"'
-    WRITE(out_unit_temp,'(A)')'set title "Fission Source"'
+    WRITE(out_unit_temp,'(A)')'set output "'//TRIM(prob_title)//'_power.png"'
+    WRITE(out_unit_temp,'(A)')'set title "Power Map"'
     WRITE(out_unit_temp,'(A)')'set grid'
     WRITE(out_unit_temp,'(A)')'set xlabel "x [cm]"'
     WRITE(out_unit_temp,'(A)')'set ylabel "y [cm]"'
     WRITE(out_unit_temp,'(A,F16.8)')'set size ratio ',SUM(h_y(:))/SUM(h_x(:))
     WRITE(out_unit_temp,'(A,ES16.8,A)')'set xrange [0:',SUM(h_x(:)),']'
     WRITE(out_unit_temp,'(A,ES16.8,A)')'set yrange [',SUM(h_y(:)),':0]'
-    WRITE(out_unit_temp,'(A,A)')'plot "'//TRIM(prob_title)//'_fiss_src.csv" with image'
+    WRITE(out_unit_temp,'(A,A)')'plot "'//TRIM(prob_title)//'_power.csv" with image'
 
     CALL EXECUTE_COMMAND_LINE('gnuplot -c temp.plotcommands.temp')
 

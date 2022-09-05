@@ -261,9 +261,9 @@ CONTAINS
 !> @param h_y - node widths in the y direction
 !>
   subroutine solver(core_x_size,core_y_size,num_eg,tol_xflux,tol_xkeff,xflux,xkeff,tol_max_iter, &
-                    nodal_method,assm_map,assm_xs,dtilde_x,dtilde_y,h_x,h_y,dl_weilandt)
+                    nodal_method,assm_map,assm_xs,dtilde_x,dtilde_y,h_x,h_y,dl_wielandt)
     INTEGER, INTENT(IN) :: core_x_size,core_y_size,num_eg,tol_max_iter,assm_map(:,:)
-    REAL(kr8), INTENT(IN) :: tol_xflux,tol_xkeff,h_x(:),h_y(:),dl_weilandt
+    REAL(kr8), INTENT(IN) :: tol_xflux,tol_xkeff,h_x(:),h_y(:),dl_wielandt
     REAL(kr8), INTENT(INOUT) :: xflux(:,:,:),xkeff,dtilde_x(:,:,:),dtilde_y(:,:,:)
     CHARACTER(*), INTENT(IN) :: nodal_method
     TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
@@ -275,14 +275,14 @@ CONTAINS
     REAL(kr8), ALLOCATABLE :: bvec(:,:)
     REAL(kr8) :: fiss_src_sum(2)
     INTEGER :: prob_size
-    !lambda prime for weilandt shift
+    !lambda prime for Wielandt shift
     REAL(kr8) :: lambda_p
-    !big lambda for weilandt shift
+    !big lambda for Wielandt shift
     REAL(kr8) :: big_lambda
-    LOGICAL :: weilandt_on
-    INTEGER(ki4), PARAMETER :: weiland_pre_its=5
+    LOGICAL :: wielandt_on
+    INTEGER(ki4), PARAMETER :: wielandt_pre_its=5
 
-    weilandt_on=(dl_weilandt>0.0D0)
+    wielandt_on=(dl_wielandt>0.0D0)
     prob_size=core_x_size*core_y_size
 
     ! build amatrix. This will change with dtilde
@@ -293,8 +293,8 @@ CONTAINS
     !build that amatrix
     CALL build_amatrix(amat,core_x_size,core_y_size,num_eg,assm_xs,assm_map,h_x,h_y,dtilde_x, &
                         dtilde_y)
-    !set the base amatrix if we're doing weilandt shift
-    IF(weilandt_on)THEN
+    !set the base amatrix if we're doing Wielandt shift
+    IF(wielandt_on)THEN
       ALLOCATE(amat_base(5, core_x_size*core_y_size,num_eg))
       amat_base=amat
     ENDIF
@@ -312,16 +312,16 @@ CONTAINS
     DO iter = 1,tol_max_iter
 
       ! build the bvec based on current keff and flux
-      IF(weilandt_on .AND. iter > weiland_pre_its)THEN
+      IF(wielandt_on .AND. iter > wielandt_pre_its)THEN
         CALL build_bvec(bvec,core_x_size,core_y_size,num_eg,assm_xs,big_lambda,xflux,assm_map)
       ELSE
         CALL build_bvec(bvec,core_x_size,core_y_size,num_eg,assm_xs,xkeff,xflux,assm_map)
       ENDIF
 
-      IF(weilandt_on .AND. iter > weiland_pre_its)THEN
-        lambda_p=xkeff_old+dl_weilandt
+      IF(wielandt_on .AND. iter > wielandt_pre_its)THEN
+        lambda_p=xkeff_old+dl_wielandt
         amat=amat_base
-        CALL weilandt_shift_amatrix(amat,lambda_p,assm_xs,core_x_size,core_y_size,num_eg, &
+        CALL wielandt_shift_amatrix(amat,lambda_p,assm_xs,core_x_size,core_y_size,num_eg, &
                                     assm_map,xflux)
       ENDIF
 
@@ -334,13 +334,13 @@ CONTAINS
       fiss_src_sum(2)=calc_fiss_src_sum(core_x_size,core_y_size,num_eg,assm_map,xflux,assm_xs)
 
       IF (iter > 1) THEN
-        IF(weilandt_on .AND. iter > weiland_pre_its)THEN
-          !if it's weilandt shift, update appropriately
+        IF(wielandt_on .AND. iter > wielandt_pre_its)THEN
+          !if it's Wielandt shift, update appropriately
           big_lambda=big_lambda*fiss_src_sum(2)/fiss_src_sum(1)
           xkeff=(1.0D0/lambda_p+1.0D0/big_lambda)**(-1)
         ELSE
           xkeff=xkeff*fiss_src_sum(2)/fiss_src_sum(1)
-          !this is for the early weilandt shift cases
+          !this is for the early Wielandt shift cases
           big_lambda=xkeff
         ENDIF
       ENDIF
@@ -371,7 +371,7 @@ CONTAINS
                         dtilde_y,h_x,h_y)
         CALL build_amatrix(amat,core_x_size,core_y_size,num_eg,assm_xs,assm_map,h_x,h_y,dtilde_x, &
                           dtilde_y)
-        IF(weilandt_on)THEN
+        IF(wielandt_on)THEN
           amat_base=amat
         ENDIF
       ENDIF
@@ -681,7 +681,7 @@ CONTAINS
   ENDFUNCTION calc_fiss_src_sum
 
 !---------------------------------------------------------------------------------------------------
-!> @brief This subroutine shifts the amatrix using the weilandt shift
+!> @brief This subroutine shifts the amatrix using the Wielandt shift
 !> @param amat - a matrix to shift
 !> @param lambda_p - eigenvalue shift
 !> @param assm_xs - assembly level cross sections
@@ -691,7 +691,7 @@ CONTAINS
 !> @param assm_map - assembly map
 !> @param xflux - scalar flux
 !>
-  SUBROUTINE weilandt_shift_amatrix(amat,lambda_p,assm_xs,core_x_size,core_y_size,num_eg, &
+  SUBROUTINE wielandt_shift_amatrix(amat,lambda_p,assm_xs,core_x_size,core_y_size,num_eg, &
                                   assm_map,xflux)
     REAL(kr8),INTENT(INOUT) :: amat(:,:,:)
     REAL(kr8),INTENT(IN) :: lambda_p,xflux(:,:,:)
@@ -716,7 +716,7 @@ CONTAINS
         ENDDO
       ENDDO
     ENDDO
-  ENDSUBROUTINE weilandt_shift_amatrix
+  ENDSUBROUTINE wielandt_shift_amatrix
 
 !---------------------------------------------------------------------------------------------------
 !> @brief This subroutine calculates dtilde

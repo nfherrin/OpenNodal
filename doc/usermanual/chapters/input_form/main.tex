@@ -1,0 +1,116 @@
+\section{Main Input File}
+
+OpenNodal's input is separated into blocks describing aspects of the problem.
+Each block may be given a number of cards describing specific details about the problem parameters.
+OpenNodal currently features the following three blocks:
+\begin{table}[H]
+\centering
+  \begin{tabular}{|l|l|}
+    \hline
+    \multicolumn{1}{|c|}{{\ul \textbf{Block Name}}} & \multicolumn{1}{c|}{{\ul \textbf{Available Cards}}} \\ \hline
+    \verb"[CASE_DETAILS]" & \verb"title", \verb"nsplit", \verb"k_eps", \verb"phi_eps", \verb"max_its", \verb"nodal_method", and \verb"wielandt" \\ \hline
+    \verb"[CORE]" & \verb"dim", \verb"size", \verb"apitch", \verb"sym", \verb"assm_map", \verb"bc", \verb"refl_mat", and \verb"buckling" \\ \hline
+    \verb"[MATERIAL]" & \verb"xs_file" and \verb"xs_map" \\ \hline
+  \end{tabular}
+\end{table}
+
+\subsection{[CASE\_DETAILS] Block}
+
+The \verb"[CASE_DETAILS]" block describes details for the problem case, including run specifications such as convergence criteria and solution method.
+The following table describes the available input cards:
+\begin{table}[H]
+\centering
+  \begin{tabular}{|p{0.12\linewidth}|p{0.4\linewidth}|p{0.18\linewidth}|p{0.2\linewidth}|}
+    \hline
+    \multicolumn{1}{|c|}{{\ul \textbf{Card Name}}} & \multicolumn{1}{c|}{{\ul \textbf{Description}}} & \multicolumn{1}{c|}{{\ul \textbf{Options}}} & \multicolumn{1}{c|}{{\ul \textbf{Required?}}} \\ \hline
+    \verb"title"  & Problem Title. & String of size $\leq 100$ & No. Default: blank \\ \hline
+    \verb"nsplit" & Spatial Refinement for nodes. Splits each assembly in the specified geometry into \verb"nsplit"$\times$\verb"nsplit" nodes. & $\integer\geq 1$ & No. Default: \verb"1" \\ \hline
+    \verb"k_eps" & Eigenvalue convergence criteria. & $\real> 0$ & No. Default: \verb"1.0E-6" \\ \hline
+    \verb"phi_eps" & Flux convergence criteria. & $\real> 0$ & No. Default: \verb"1.0E-5" \\ \hline
+    \verb"max_its" & Maximum number of outer iterations. & $\integer\geq 1$ & No. Default: \verb"100" \\ \hline
+    \verb"nodal_method" & Nodal method to be employed. Either Finite Difference or polynomial NEM & \verb"fd, poly" & No. Default: \verb"fd" \\ \hline
+    \verb"wielandt" & Wielandt shift $\delta\lambda$ value. A value of 0 will leave it turned off. & $\real> 0$ & No. Default: off (\verb"0") \\ \hline
+  \end{tabular}
+\end{table}
+
+\subsection{[CORE] Block}
+
+The \verb"[CORE]" block describes the geometry of the core itself, including auxiliary geometric information such as axial buckling, symmetry, boundary conditions, etc.
+The following table describes the available input cards:
+\begin{table}[H]
+\centering
+  \begin{tabular}{|p{0.12\linewidth}|p{0.42\linewidth}|p{0.16\linewidth}|p{0.2\linewidth}|}
+    \hline
+    \multicolumn{1}{|c|}{{\ul \textbf{Card Name}}} & \multicolumn{1}{c|}{{\ul \textbf{Description}}} & \multicolumn{1}{c|}{{\ul \textbf{Options}}} & \multicolumn{1}{c|}{{\ul \textbf{Required?}}} \\ \hline
+    \verb"dim" & Dimensionality of problem. 1D, 2D, 3D. Currently ONLY 2D is supported. & \verb"1D, 2D, 3D" & No. Default: \verb"2D" \\ \hline
+    \verb"size" & Size of the core across. Cores are assumed to be square. & $\integer\geq 1$ & No. Default: \verb"1"  \\ \hline
+    \verb"apitch" & Assembly pitch in cm. All assemblies are assigned assumed square and given equal widths.
+    Non-square assemblies may be constructed using multiple assemblies. & $\real>0$ & No. Default: \verb"1.0E0"   \\ \hline
+    \verb"sym" & Problem symmetry. For half (\verb"half") symmetry it is assumed the left side is reflective, and for quarter (\verb"qtr") symmetry it is assumed that the left and top sides are reflective.
+    & \verb"full, half, qtr" & No. Default: \verb"full"  \\ \hline
+    \verb"assm_map" & Assembly map matrix. Matrix starts on the next line. Will have number of rows and columns equal to \verb"size" unless symmetry is used.
+    For \verb"half" symmetry the number of columns will be $\lceil \verb"size"/2\rceil$. For \verb"qtr" symmetry the number of columns AND rows will be $\lceil \verb"size"/2\rceil$.
+    Any gaps will be filled with \verb"refl_mat", so if gaps are left for ragged core specification, then  \verb"refl_mat" MUST be specified in this case. & Map of $\integer$ assembly IDs & Yes. \\ \hline
+    \verb"bc" & Boundary conditions to be applied. These are not applied to the reflective sides for a problem with non-\verb"full" symmetry.
+    For \verb"albedo", $\real$ albedo values must also be given on the same line for each energy group.
+    For \verb"reflector", the \verb"refl_mat" will be added as a single assembly buffer as well as self-scatter diffusion length boundary, so  \verb"refl_mat" MUST be specified in this case.
+    & \verb"vacuum," \verb"reflective," \verb"reflector," \verb"zero, albedo" & No. Default: \verb"vacuum"  \\ \hline
+    \verb"refl_mat" & Reflector material index to be used in either \verb"reflector" boundary conditions and/or to fill in gaps for a ragged core. & $\integer\geq 1$ & No. Default: no reflector material \\ \hline
+    \verb"buckling" & Axial geometric buckling. If \verb"height" is given, then it should be immediately followed by a positive real height on the same line and the axial buckling will be computed from that height.
+    & $\real$, \verb"height" $\real$ & No. Default: \verb"0.0E0" \\ \hline
+  \end{tabular}
+\end{table}
+
+\subsection{[MATERIAL] Block}
+
+The \verb"[MATERIAL]" block describes cross sections for each assembly.
+The following table describes the available input cards:
+\begin{table}[H]
+\centering
+  \begin{tabular}{|p{0.12\linewidth}|p{0.42\linewidth}|p{0.16\linewidth}|p{0.2\linewidth}|}
+    \hline
+    \multicolumn{1}{|c|}{{\ul \textbf{Card Name}}} & \multicolumn{1}{c|}{{\ul \textbf{Description}}} & \multicolumn{1}{c|}{{\ul \textbf{Options}}} & \multicolumn{1}{c|}{{\ul \textbf{Required?}}} \\ \hline
+    \verb"xs_file" & Cross section filename. Can include the path to the file for a cross sections file not in the same directory. & String of size $\leq 200$ & Yes. \\ \hline
+    \verb"xs_map" & The mapping for cross section identifiers to assembly IDs as well as specifications about macro or micro cross sections. Currently ONLY macro cross sections are supported.
+    The card should be followed with the number of assembly IDs to map onto on the same line. This number should at least equal the maximum assembly ID in the \verb"assm_map".
+    On each following line the assembly cross section mapping should be given as \verb"ID macro/micro XSid" counting from assembly \verb"ID" from 1 up to the number of IDs to map. & $\integer\geq 1$ \newline
+    $1$ \verb"macro <XSid>"\newline
+    $2$ \verb"macro <XSid>"\newline
+    $\vdots$ & Yes. \\ \hline
+  \end{tabular}
+\end{table}
+
+\section{Cross Section Input File}
+
+The OpenNodal cross section file contains all cross section data for an OpenNodal calculation.
+Currently, only macroscopic cross sections are supported, so only the description for them will be given.
+The following is the order of the data as it appears in the cross section file (note that blank lines between blocks are ignored):
+\begin{verbatim}
+Line 1: OpenNodal_ASSY-XS_V1 <num_mats> <G>
+Block 1: Each entry in this block contains cross sections for a single material.
+Each block contains G+5 lines. There are num_mats blocks.
+Entry line 1: id <XSid>
+Entry line 2: diffusion_coefficient_1 diffusion_coefficient_2... diffusion_coefficient_G
+Entry line 2: fission_spectrum_1 fission_spectrum_2... fission_spectrum_G
+Entry line 3: nuSigma_f_1 nuSigma_f_2 nuSigma_f_3... nuSigma_f_G
+Entry line 4: nu_bar_1 nu_bar_2... nu_bar_G
+Entry line 5: Sigma_a_1 Sigma_a_2... Sigma_a_G
+Entry line 6: sig_scat_{1->1} sig_scat_{2->1}... sig_scat_{G->1}
+Entry line 7: sig_scat_{1->2} sig_scat_{2->2}... sig_scat_{G->2}
+        :
+Entry line G+5: sig_scat_{1->G} sig_scat_{2->G}... sig_scat_{G->G}
+        :
+\end{verbatim}
+
+Where:
+\begin{itemize}
+\item \verb"num_mats" = Total number of cross section materials (presumably homogenized assemblies). There should be this many blocks.
+\item \verb"G" = Total number of energy groups.
+\item \verb"XSid" = ID of the material. Used in identifying the material and region mapping. Not limited to integers, can be a general string.
+\item \verb"diffusion_coefficient_g" = Diffusion coefficient in energy group $g$ ($D$).
+\item \verb"fission_spectrum_g" = Fraction of neutrons born in fission that appear in energy group $g$ ($\chi$).
+\item \verb"nuSigma_f_g" = Fission production cross section in group $g$ ($\nu\Sigma_f$ NOT $\Sigma_f$).
+\item \verb"nu_bar_g" = Average number of neutrons released by fission caused by a neutron in energy group $g$ ($\nu$).
+\item \verb"Sigma_a_g" = Absorption cross section in energy group $g$ ($\Sigma_a$).
+\item \verb"sig_scat_{g'->g}" = Scattering cross section from group $g'$ to $g$ ($\Sigma_{s,g'\rightarrow g}$).
+\end{itemize}

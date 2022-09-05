@@ -6,6 +6,7 @@ OpenNodal_INP_V1
   phi_eps 1.0D-10
   max_its 10000
   nodal_method fd
+  wielandt 0.02
 
 [CORE]
   dim 2D
@@ -29,7 +30,7 @@ OpenNodal_INP_V1
 
 [MATERIAL]
   xs_file bss11.xs
-  xs_map 4
+  xs_map 5
     1 macro reg1
     2 macro reg2
     3 macro reg3

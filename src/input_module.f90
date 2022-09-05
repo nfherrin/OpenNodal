@@ -28,10 +28,10 @@ MODULE input_module
 
   !variables to be used to gather data for the variables in main, also the defaults
   INTEGER(ki4) :: p_d=2                           !prob_dim
-  INTEGER(ki4) :: c_s=0                           !core_size
-  INTEGER(ki4) :: x_s=0                           !core_x_size
-  INTEGER(ki4) :: y_s=0                           !core_y_size
-  REAL(kr8) :: a_p=0                              !assm_pitch
+  INTEGER(ki4) :: c_s=1                           !core_size
+  INTEGER(ki4) :: x_s=1                           !core_x_size
+  INTEGER(ki4) :: y_s=1                           !core_y_size
+  REAL(kr8) :: a_p=1.0D0                              !assm_pitch
   CHARACTER(100) :: p_s='full'                    !prob_sym
   INTEGER(ki4), ALLOCATABLE :: a_m(:,:)           !assm_map
   REAL(kr8), ALLOCATABLE :: d_x(:)                !h_x
@@ -48,7 +48,7 @@ MODULE input_module
   TYPE(macro_assm_xs_type), ALLOCATABLE :: a_x(:) !assm_xs
   INTEGER(ki4) :: r_m=0                           !refl_mat
   REAL(kr8) :: a_b=0.0D0                          !ax_buckle
-  REAL(kr8) :: d_w=-1.0D0                         !weilandt shift value
+  REAL(kr8) :: d_w=-1.0D0                         !wielandt shift value
   CHARACTER(16) :: a_r='NONE'                     !anal_ref
 
   !> This data type stores card information and reads card data
@@ -147,11 +147,11 @@ CONTAINS
 !>
   SUBROUTINE read_files(prob_dim,core_x_size,core_y_size,assm_pitch,prob_sym,assm_map,h_x,h_y, &
                         bc_opt,albedos,num_eg,nsplit,tol_xkeff,tol_xflux,tol_max_iter,nodal_method, &
-                        num_assm_reg,assm_xs,refl_mat,ax_buckle,dl_weilandt,anal_ref)
+                        num_assm_reg,assm_xs,refl_mat,ax_buckle,dl_wielandt,anal_ref)
     !input/output variables
     INTEGER(ki4), INTENT(OUT) :: prob_dim,core_x_size,core_y_size,num_eg,nsplit,tol_max_iter
     INTEGER(ki4), INTENT(OUT) :: num_assm_reg,refl_mat
-    REAL(kr8), INTENT(OUT) :: assm_pitch,tol_xkeff,tol_xflux,ax_buckle,dl_weilandt
+    REAL(kr8), INTENT(OUT) :: assm_pitch,tol_xkeff,tol_xflux,ax_buckle,dl_wielandt
     CHARACTER(100), INTENT(OUT) :: prob_sym,bc_opt,nodal_method
     INTEGER(ki4), INTENT(OUT), ALLOCATABLE :: assm_map(:,:)
     REAL(kr8), INTENT(OUT), ALLOCATABLE :: h_x(:),h_y(:),albedos(:)
@@ -256,7 +256,7 @@ CONTAINS
       assm_xs(i)%sigma_r=a_x(i)%sigma_r
       assm_xs(i)%sigma_scat=a_x(i)%sigma_scat
     ENDDO
-    dl_weilandt=d_w
+    dl_wielandt=d_w
     anal_ref=a_r
   ENDSUBROUTINE read_files
 
@@ -292,8 +292,8 @@ CONTAINS
     blocks(i)%cards(j)%cname='nodal_method'
     blocks(i)%cards(j)%getcard=>get_nodal_method
     j=7
-    blocks(i)%cards(j)%cname='weilandt'
-    blocks(i)%cards(j)%getcard=>get_weilandt
+    blocks(i)%cards(j)%cname='wielandt'
+    blocks(i)%cards(j)%getcard=>get_wielandt
     j=8
     blocks(i)%cards(j)%cname='anal_ref'
     blocks(i)%cards(j)%getcard=>get_anal_ref
@@ -820,7 +820,7 @@ CONTAINS
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in which nodal method is being used, right now only fd and poly supported
 !>
-  SUBROUTINE get_weilandt(this_card,wwords)
+  SUBROUTINE get_wielandt(this_card,wwords)
     CLASS(cardType),INTENT(INOUT) :: this_card
     CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
 
@@ -834,10 +834,10 @@ CONTAINS
     READ(wwords(2),*)d_w
 
     IF(d_w .LT. 0.0D0)THEN
-      CALL fatal_error('Invalid negative Weilandt shift value: '//TRIM(wwords(2)))
+      CALL fatal_error('Invalid negative Wielandt shift value: '//TRIM(wwords(2)))
     ENDIF
 
-  ENDSUBROUTINE get_weilandt
+  ENDSUBROUTINE get_wielandt
 
   SUBROUTINE get_anal_ref(this_card,wwords)
     class(cardType),INTENT(INOUT) :: this_card
