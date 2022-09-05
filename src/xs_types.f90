@@ -28,6 +28,8 @@ MODULE xs_types
     REAL(kr8), DIMENSION(:), ALLOCATABLE :: sigma_a
     !> total cross section Sigma_t
     REAL(kr8), DIMENSION(:), ALLOCATABLE :: sigma_t
+    !> removal cross section, total + buckling - self scatter
+    REAL(kr8), DIMENSION(:), ALLOCATABLE :: sigma_r
     !> scattering matrix
     REAL(kr8), DIMENSION(:,:), ALLOCATABLE :: sigma_scat
   ENDTYPE macro_assm_xs_type

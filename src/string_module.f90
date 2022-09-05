@@ -22,10 +22,10 @@ CONTAINS
 !> @param nargs - number of arguments after delimiting
 !>
   SUBROUTINE parse(str,delims,args,nargs)
-    CHARACTER(*),INTENT(INOUT) :: str
-    CHARACTER(*),INTENT(IN) :: delims
-    CHARACTER(*),INTENT(OUT) :: args(:)
-    INTEGER(ki4),INTENT(OUT) :: nargs
+    CHARACTER(*), INTENT(INOUT) :: str
+    CHARACTER(*), INTENT(IN) :: delims
+    CHARACTER(*), INTENT(OUT) :: args(:)
+    INTEGER(ki4), INTENT(OUT) :: nargs
 
     CHARACTER(LEN_TRIM(str)) :: strsav
     INTEGER(ki4) :: na,i,lenstr
@@ -54,7 +54,7 @@ CONTAINS
 !> @param str - input string to compact
 !>
   SUBROUTINE compact(str)
-    CHARACTER(*),INTENT(INOUT) :: str
+    CHARACTER(*), INTENT(INOUT) :: str
 
     CHARACTER(1):: ch
     CHARACTER(LEN_TRIM(str)) :: outstr
@@ -96,10 +96,10 @@ CONTAINS
 !> @param sep - contains the found delimiter
 !>
   SUBROUTINE split(str,delims,before,sep)
-    CHARACTER(*),INTENT(INOUT) :: str
-    CHARACTER(*),INTENT(IN) :: delims
-    CHARACTER(*),INTENT(OUT) :: before
-    CHARACTER,INTENT(INOUT),OPTIONAL :: sep
+    CHARACTER(*), INTENT(INOUT) :: str
+    CHARACTER(*), INTENT(IN) :: delims
+    CHARACTER(*), INTENT(OUT) :: before
+    CHARACTER, INTENT(INOUT), OPTIONAL :: sep
 
     LOGICAL :: pres
     CHARACTER :: ch,cha
@@ -160,7 +160,7 @@ CONTAINS
 !> @param str - string to remove backslashes from
 !>
   SUBROUTINE removebksl(str)
-    CHARACTER(*),INTENT(INOUT) :: str
+    CHARACTER(*), INTENT(INOUT) :: str
 
     CHARACTER(1):: ch
     CHARACTER(LEN_TRIM(str))::outstr
@@ -196,10 +196,9 @@ CONTAINS
 !> @param k - integer to convert
 !> @param inform - number of integer places to use, optional defaults to I0 (no additional spacing)
 !>
-  FUNCTION str_int(k,inform)
+  CHARACTER(64) FUNCTION str_int(k,inform)
     INTEGER(ki4), INTENT(IN) :: k
     INTEGER, INTENT(IN), OPTIONAL :: inform
-    CHARACTER(64) :: str_int
     CHARACTER(64) :: format_char
 
     WRITE (str_int, *) k
@@ -217,11 +216,10 @@ CONTAINS
 !> @param inform - format of the double print. 'es' is scientific, 'f' is decimal.
 !>    Scientific is default
 !>
-  FUNCTION str_real(val,decs,inform)
+  CHARACTER(64) FUNCTION str_real(val,decs,inform)
     REAL(kr8), INTENT(IN) :: val
     INTEGER(ki4), INTENT(IN), OPTIONAL :: decs
     CHARACTER(*), INTENT(IN), OPTIONAL :: inform
-    CHARACTER(64) :: str_real
     CHARACTER(64) :: format_char
     CHARACTER(2) :: real_form
     INTEGER(ki4) :: ndecs
@@ -240,9 +238,8 @@ CONTAINS
 !> @brief This function makes a string lowercase
 !> @param str - string to make lowercase
 !>
-  FUNCTION lowercase(str)
-    CHARACTER(*),INTENT(IN):: str
-    CHARACTER(len_trim(str)):: lowercase
+  CHARACTER(len_trim(str)) FUNCTION lowercase(str)
+    CHARACTER(*), INTENT(IN):: str
 
     INTEGER(ki4) :: i,iav,ilen,ioffset,iqc,iquote
 
@@ -274,9 +271,8 @@ CONTAINS
 !> @brief This function makes a string uppercase
 !> @param str - string to make uppercase
 !>
-  FUNCTION uppercase(str)
-    CHARACTER(*),INTENT(IN):: str
-    CHARACTER(len_trim(str)):: uppercase
+  CHARACTER(len_trim(str)) FUNCTION uppercase(str)
+    CHARACTER(*), INTENT(IN):: str
 
     INTEGER(ki4) :: i,iav,ilen,ioffset,iqc,iquote
 

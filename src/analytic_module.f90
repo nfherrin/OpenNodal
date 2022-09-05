@@ -1,191 +1,200 @@
 MODULE analytic_module
 USE precisions, ONLY : ki4, kr8
+USE globals, ONLY : print_log, pi
+USE errors_module, ONLY : fatal_error
+USE string_module, ONLY : str
+USE xs_types, ONLY : macro_assm_xs_type
 IMPLICIT NONE
 
 PRIVATE
 PUBLIC :: anal
 
-! TODO move this to some sort of "constants" module
-! (probably with Avogadro's number)
-
-! Note: this is considered the best way of calculating pi as it is guaranteed to
-! have the maximal precision. Alternatively, just type a lot of digits.
-real(kr8), parameter :: pi = 4d0*atan(1d0)
-
 CONTAINS
 
-  subroutine anal (xkeff, xflux, anal_ref)
-    use globals , only : print_log
-    use errors_module, only : fatal_error
-    IMPLICIT NONE
-    real(kr8), intent(in) :: xkeff
-    real(kr8), intent(in) :: xflux(:,:,:)
-    character(*), intent(in) :: anal_ref
+  SUBROUTINE anal (xkeff, xflux, anal_ref, assm_map, assm_pitch, assm_xs, &
+                   core_x_size, core_y_size, num_eg)
+    REAL(kr8), INTENT(IN) :: xkeff
+    REAL(kr8), INTENT(IN) :: xflux(:,:,:)
+    CHARACTER(*), INTENT(IN) :: anal_ref
+    INTEGER(ki4), INTENT(IN) :: assm_map(:,:)
+    REAL(kr8), INTENT(IN) :: assm_pitch
+    TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
+    INTEGER(ki4), INTENT(IN) :: core_x_size, core_y_size, num_eg
 
-
-    call print_log('')
-    call print_log('=== ANALYSIS ===')
+    CALL print_log('')
+    CALL print_log('=== ANALYSIS ===')
 
     ! we can analyze keff, flux, and flux ratio
     ! but not all reference solutions may have all options available
     ! so we do some switching here
-    select case (anal_ref)
-      case ('2d2g')
-        call anal_frat (xflux, anal_ref)
-        call anal_keff (xkeff, anal_ref)
-        call anal_flux (xflux, anal_ref)
-      case default
-        call fatal_error (&
+    SELECT CASE (anal_ref)
+      CASE ('2d2g')
+        CALL anal_frat (xflux, anal_ref, assm_map, assm_pitch, assm_xs, &
+                        core_x_size, core_y_size)
+        CALL anal_keff (xkeff, anal_ref, assm_map, assm_pitch, assm_xs, &
+                        core_x_size, core_y_size)
+        CALL anal_flux (xflux, anal_ref, assm_pitch, core_x_size, core_y_size, &
+                        num_eg)
+      CASE DEFAULT
+        CALL fatal_error (&
           'analysis not implemented for reference problem: ' // anal_ref)
-    endselect
+      ENDSELECT
 
-    return
-  endsubroutine anal
+    RETURN
+  ENDSUBROUTINE  anal
 
-  real(kr8) function calc_keff (anal_ref)
-    use globals, only : assm_xs, assm_map, assm_pitch, core_x_size, core_y_size
-    use errors_module, only : fatal_error
-    IMPLICIT NONE
-    character(*), intent(in) :: anal_ref
+  REAL(kr8) FUNCTION calc_keff (anal_ref, assm_map, assm_pitch, assm_xs, &
+                                core_x_size, core_y_size)
+    CHARACTER(*), INTENT(IN) :: anal_ref
+    INTEGER(ki4), INTENT(IN) :: assm_map(:,:)
+    REAL(kr8), INTENT(IN) :: assm_pitch
+    TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
+    INTEGER, INTENT(IN) :: core_x_size, core_y_size
 
-    real(kr8) :: Lx, Ly
-    real(kr8) :: bsq_geo
-    integer   :: mat_num
-    
-    select case (anal_ref)
-      case ('2d2g')
+    REAL(kr8)    :: Lx, Ly
+    REAL(kr8)    :: bsq_geo, frat
+    INTEGER(ki4) :: mat_num
+
+    SELECT CASE (anal_ref)
+      CASE ('2d2g')
         Lx = assm_pitch*core_x_size
         Ly = assm_pitch*core_y_size
         bsq_geo = (pi/Lx)**2 + (pi/Ly)**2
         mat_num = assm_map(1,1)
+        frat = calc_frat(anal_ref, assm_map, assm_pitch, assm_xs, &
+                         core_x_size, core_y_size)
         calc_keff = (assm_xs(mat_num)%nusigma_f(1) + &
-          assm_xs(mat_num)%nusigma_f(2)*calc_frat(anal_ref)) / &
-          (assm_xs(mat_num)%D(1)*bsq_geo + &
-          (assm_xs(mat_num)%sigma_t(1) - assm_xs(mat_num)%sigma_scat(1,1)))
-        return
-      case default
-        call fatal_error (&
+          assm_xs(mat_num)%nusigma_f(2)*frat) / &
+          (assm_xs(mat_num)%D(1)*bsq_geo + assm_xs(mat_num)%sigma_r(1))
+        RETURN
+      CASE DEFAULT
+        CALL fatal_error (&
           'analytic keff calculation not implemented for reference problem: ' &
           // anal_ref)
-    endselect
+    ENDSELECT
 
-  endfunction calc_keff
+  ENDFUNCTION calc_keff
 
-  subroutine anal_keff (xkeff, anal_ref)
-    use errors_module, only : fatal_error
-    use globals, only : print_log
-    use string_module, only : str
-    IMPLICIT NONE
-    real(kr8), intent(in) :: xkeff
-    character(*), intent(in) :: anal_ref
+  SUBROUTINE anal_keff (xkeff, anal_ref, assm_map, assm_pitch, assm_xs, &
+                        core_x_size, core_y_size)
+    REAL(kr8), INTENT(IN) :: xkeff
+    CHARACTER(*), INTENT(IN) :: anal_ref
+    INTEGER(ki4), INTENT(IN) :: assm_map(:,:)
+    REAL(kr8), INTENT(IN) :: assm_pitch
+    TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
+    INTEGER(ki4), INTENT(IN) :: core_x_size, core_y_size
 
-    real(kr8) :: anal, calc, err
+    REAL(kr8) :: anal, calc, err
 
-    select case (anal_ref)
-      case ('2d2g')
-        anal = calc_keff(anal_ref)
+    SELECT CASE (anal_ref)
+      CASE ('2d2g')
+        anal = calc_keff(anal_ref, assm_map, assm_pitch, assm_xs, &
+                         core_x_size, core_y_size)
         calc = xkeff
-      case default
-        call fatal_error (&
+      CASE DEFAULT
+        CALL fatal_error (&
           'analytic keff calculation not implemented for reference problem: ' &
           // anal_ref)
-    endselect
+    ENDSELECT
 
     err = (anal - calc)*1d5
 
-    call print_log('XKEFF_anal = ' // str(anal, 10, 'f'))
-    call print_log('XKEFF_calc = ' // str(calc, 10, 'f'))
-    call print_log('XKEFF_err  = ' // TRIM(ADJUSTL(str(err , 6, 'f'))) // ' [pcm]')
+    CALL print_log('XKEFF_anal = ' // str(anal, 10, 'f'))
+    CALL print_log('XKEFF_calc = ' // str(calc, 10, 'f'))
+    CALL print_log('XKEFF_err  = ' // TRIM(ADJUSTL(str(err , 6, 'f'))) // ' [pcm]')
 
-    return
-  endsubroutine anal_keff
+    RETURN
+  ENDSUBROUTINE anal_keff
 
-  real(kr8) function calc_frat (anal_ref)
-    use globals, only : assm_xs, assm_map, assm_pitch, core_x_size, core_y_size
-    use errors_module, only : fatal_error
-    IMPLICIT NONE
-    character(*), intent(in) :: anal_ref
+  REAL(kr8) FUNCTION calc_frat (anal_ref, assm_map, assm_pitch, assm_xs, &
+                                core_x_size, core_y_size)
+    CHARACTER(*), INTENT(IN) :: anal_ref
+    INTEGER(ki4), INTENT(IN) :: assm_map(:,:)
+    REAL(kr8), INTENT(IN) :: assm_pitch
+    TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
+    INTEGER, INTENT(IN) :: core_x_size, core_y_size
 
-    real(kr8) :: Lx, Ly
-    real(kr8) :: bsq_geo
-    integer   :: mat_num
+    REAL(kr8) :: Lx, Ly
+    REAL(kr8) :: bsq_geo
+    INTEGER   :: mat_num
 
-    select case (anal_ref)
-      case ('2d2g')
+    SELECT CASE (anal_ref)
+      CASE ('2d2g')
         Lx = assm_pitch*core_x_size
         Ly = assm_pitch*core_y_size
         bsq_geo = (pi/Lx)**2 + (pi/Ly)**2
         mat_num = assm_map(1,1)
         calc_frat = assm_xs(mat_num)%sigma_scat(2,1) / &
-          (assm_xs(mat_num)%D(2)*bsq_geo + &
-          (assm_xs(mat_num)%sigma_t(2)-assm_xs(mat_num)%sigma_scat(2,2))) ! TODO rewrite with sigma_r
-        return
-      case default
-        call fatal_error (&
+          (assm_xs(mat_num)%D(2)*bsq_geo + assm_xs(mat_num)%sigma_r(2))
+        RETURN
+      CASE DEFAULT
+        CALL fatal_error (&
           'analytic ratio calculation not implemented for reference problem: ' &
           // anal_ref)
-    endselect
+    ENDSELECT
 
-  endfunction calc_frat
+  ENDFUNCTION calc_frat
 
-  subroutine anal_frat (xflux, anal_ref)
-    use errors_module, only : fatal_error
-    use globals, only : print_log
-    use string_module, only : str
-    IMPLICIT NONE
-    real(kr8), intent(in) :: xflux(:,:,:)
-    character(*), intent(in) :: anal_ref
+  SUBROUTINE anal_frat (xflux, anal_ref, assm_map, assm_pitch, assm_xs, &
+                        core_x_size, core_y_size)
+    REAL(kr8), INTENT(IN) :: xflux(:,:,:)
+    CHARACTER(*), INTENT(IN) :: anal_ref
+    INTEGER(ki4), INTENT(IN) :: assm_map(:,:)
+    REAL(kr8), INTENT(IN) :: assm_pitch
+    TYPE(macro_assm_xs_type), INTENT(IN) :: assm_xs(:)
+    INTEGER(ki4), INTENT(IN) :: core_x_size, core_y_size
 
-    real(kr8) :: anal, calc, err
+    REAL(kr8) :: anal, calc, err
 
-    select case (anal_ref)
-      case ('2d2g')
-        anal = calc_frat(anal_ref)
+    SELECT CASE (anal_ref)
+      CASE ('2d2g')
+        anal = calc_frat(anal_ref, assm_map, assm_pitch, assm_xs, core_x_size, core_y_size)
         calc = maxval(abs(xflux(:,:,2))) / maxval(abs(xflux(:,:,1))) ! TODO rewrite with inf norm
-      case default
-        call fatal_error (&
+      CASE DEFAULT
+        CALL fatal_error (&
           'analytic ratio calculation not implemented for reference problem: ' &
           // anal_ref)
-    endselect
+        ENDSELECT
 
     err = anal - calc
 
-    call print_log('RATIO_anal = ' // str(anal, 6, 'es'))
-    call print_log('RATIO_calc = ' // str(calc, 6, 'es'))
-    call print_log('RATIO_err  = ' // str(err , 6, 'es'))
+    CALL print_log('RATIO_anal = ' // str(anal, 6, 'es'))
+    CALL print_log('RATIO_calc = ' // str(calc, 6, 'es'))
+    CALL print_log('RATIO_err  = ' // str(err , 6, 'es'))
 
-    return
-  endsubroutine anal_frat
+    RETURN
+  ENDSUBROUTINE anal_frat
 
-  REAL(kr8) FUNCTION calc_flux(x, y, z, anal_ref)
-    use globals, only : assm_pitch, core_x_size, core_y_size
-    use errors_module, only : fatal_error
-    REAL(kr8), INTENT(in) :: x, y, z
-    CHARACTER(*), INTENT(in) :: anal_ref
+  REAL(kr8) FUNCTION calc_flux(x, y, z, anal_ref, assm_pitch, core_x_size, &
+                               core_y_size)
+    REAL(kr8), INTENT(IN) :: x, y, z
+    CHARACTER(*), INTENT(IN) :: anal_ref
+    REAL(kr8), INTENT(IN) :: assm_pitch
+    INTEGER(ki4), INTENT(IN) :: core_x_size, core_y_size
 
     REAL(kr8) :: Lx, Ly
 
-    select case (anal_ref)
-      case ('2d2g')
+    SELECT CASE (anal_ref)
+      CASE ('2d2g')
         Lx = assm_pitch*core_x_size
         Ly = assm_pitch*core_y_size
-        ! note: only fast group (i.e. g=1 with normalization constant k1=1)
+        ! note: ONLY fast group (i.e. g=1 with normalization constant k1=1)
         calc_flux = 1d0*SIN(pi/Lx*x)*SIN(pi/Ly*y)
         RETURN
-      case default
-        call fatal_error (&
+      CASE DEFAULT
+        CALL fatal_error (&
           'analytic flux calculation not implemented for reference problem: ' &
           // anal_ref)
-    endselect
+    ENDSELECT
 
   ENDFUNCTION calc_flux
 
-  subroutine anal_flux (xflux, anal_ref)
-    use globals , only : core_x_size, core_y_size, num_eg, print_log, assm_pitch
-    use string_module, only : str
-    IMPLICIT NONE
-    real(kr8), intent(in) :: xflux(:,:,:)
-    character(*), intent(in) :: anal_ref
+  SUBROUTINE anal_flux (xflux, anal_ref, assm_pitch, core_x_size, core_y_size, &
+                        num_eg)
+    REAL(kr8), INTENT(IN) :: xflux(:,:,:)
+    CHARACTER(*), INTENT(IN) :: anal_ref
+    REAL(kr8), INTENT(IN) :: assm_pitch
+    INTEGER(ki4), INTENT(IN) :: core_x_size, core_y_size, num_eg
 
     INTEGER   :: i, j
     REAL(kr8) :: dx, dy, x, y
@@ -194,7 +203,7 @@ CONTAINS
 
     ! necessary so that other routines can renormalize to the referenced
     ! analytic solution
-    allocate(cpy_flux(core_x_size, core_y_size, num_eg))
+    ALLOCATE(cpy_flux(core_x_size, core_y_size, num_eg))
     cpy_flux = xflux
     cpy_flux = cpy_flux / MAXVAL(cpy_flux)
 
@@ -208,7 +217,7 @@ CONTAINS
       y = dy*(j-0.5d0)
       DO i = 1,core_x_size
         x = dx*(i-0.5d0)
-        diff = calc_flux(x, y, 0d0, anal_ref) - cpy_flux(i,j,1)
+        diff = calc_flux(x, y, 0d0, anal_ref, assm_pitch, core_x_size, core_y_size) - cpy_flux(i,j,1)
         diff_two = diff_two + diff**2
         diff_inf = MAX(diff_inf, ABS(diff))
       ENDDO
@@ -222,7 +231,7 @@ CONTAINS
 
     DEALLOCATE(cpy_flux)
 
-    return
-  endsubroutine anal_flux
+    RETURN
+  ENDSUBROUTINE anal_flux
 
 ENDMODULE analytic_module
