@@ -13,6 +13,12 @@ MODULE solvers_module
 
   CHARACTER(*), PARAMETER :: inner_solve_method = 'sor'
 
+  ! arrays for tracking inner iteration performance for optimization of SOR
+  ! over-relaxation factor
+  INTEGER(ki4), ALLOCATABLE :: sor_hist_it(:,:) ! (3,num_eg)
+  REAL(kr8), ALLOCATABLE :: sor_hist_omega(:,:) ! (3,num_eg)
+  REAL(kr8), ALLOCATABLE :: sor_opt_omega(:)    ! (num_eg)
+
 CONTAINS
 
 !---------------------------------------------------------------------------------------------------
@@ -174,6 +180,14 @@ CONTAINS
         dtilde_x=0.0D0
         dtilde_y=0.0D0
     ENDSELECT
+
+    ALLOCATE (sor_hist_it(3,num_eg)    ,&
+              sor_hist_omega(3,num_eg) ,&
+              sor_opt_omega(num_eg)     )
+    sor_hist_it    = -1
+    sor_hist_omega = 0d0
+    sor_opt_omega  = 1.0
+
   ENDSUBROUTINE solver_init
 !
 !---------------------------------------------------------------------------------------------------
@@ -240,6 +254,7 @@ CONTAINS
     ENDDO ! iter = 1,toL_inner_maxit
 
     CALL print_log('WARNING: SOR not converged')
+    RETURN
   ENDSUBROUTINE sor
 
 !---------------------------------------------------------------------------------------------------
@@ -325,9 +340,12 @@ CONTAINS
                                     assm_map,xflux)
       ENDIF
 
+      IF (inner_solve_method == 'sor') &
+        CALL sor_update_omega(num_eg, sor_hist_it, sor_hist_omega, sor_opt_omega)
+
       DO g=1,num_eg
-        CALL inner_solve(inner_solve_method, prob_size, 1d-1*MIN(tol_xflux,tol_xkeff), 10000, &
-                        amat(:,:,g), bvec(:,g), xflux(:,:,g),core_x_size,core_y_size)
+        CALL inner_solve(inner_solve_method, sor_opt_omega(g), prob_size, 1d-1*MIN(tol_xflux,tol_xkeff), 10000, &
+                        amat(:,:,g), bvec(:,g), xflux(:,:,g),core_x_size,core_y_size, sor_hist_it(1,g))
         CALL add_downscatter(bvec,g,core_x_size,core_y_size,num_eg,assm_xs,assm_map,xflux)
       ENDDO
 
@@ -381,6 +399,8 @@ CONTAINS
     ENDDO ! iter = 1,tol_max_iter
 
     DEALLOCATE(amat, flux_old, bvec)
+
+    DEALLOCATE(sor_hist_it, sor_hist_omega, sor_opt_omega)
 
     CALL print_log('ITERATIONS FINISHED')
     CALL print_log('XKEFF = '//str(xkeff,16,'F'))
@@ -532,6 +552,7 @@ CONTAINS
 !---------------------------------------------------------------------------------------------------
 !> @brief This subroutine solves inner linear system of equations (allows switching solvers)
 !> @param method - linear solver method to use
+!> @param w_opt - optimized over-relaxation factor if SOR is used
 !> @param rank - system size
 !> @param tol_inner_x - Inner tolerance
 !> @param tol_inner_maxit - Number of max iterations
@@ -541,15 +562,17 @@ CONTAINS
 !> @param core_x_size - core size in the x direction
 !> @param core_y_size - core size in the y direction
 !>
-  SUBROUTINE inner_solve(method, rank, tol_inner_x, tol_inner_maxit, &
-                         amat, bvec, flux,core_x_size,core_y_size)
+  SUBROUTINE inner_solve(method, w_opt, rank, tol_inner_x, tol_inner_maxit, &
+                         amat, bvec, flux,core_x_size,core_y_size, itcount)
     CHARACTER(*), INTENT(IN)    :: method
-    INTEGER,      INTENT(IN)    :: rank,core_x_size,core_y_size
+    REAL(kr8),    INTENT(IN)    :: w_opt
+    INTEGER(ki4), INTENT(IN)    :: rank,core_x_size,core_y_size
     REAL(kr8),    INTENT(IN)    :: tol_inner_x
-    INTEGER,      INTENT(IN)    :: tol_inner_maxit
+    INTEGER(ki4), INTENT(IN)    :: tol_inner_maxit
     REAL(kr8),    INTENT(IN)    :: amat(:,:)
     REAL(kr8),    INTENT(IN)    :: bvec(:)
     REAL(kr8),    INTENT(INOUT) :: flux(:,:)
+    INTEGER(ki4), INTENT(OUT)   :: itcount
 
     ! for dgesv
     REAL(kr8), ALLOCATABLE :: atemp(:,:)
@@ -575,7 +598,7 @@ CONTAINS
         DEALLOCATE(atemp, ipiv)
       CASE ('sor')
         ! TODO set omega better than this
-        CALL sor(amat, bvec, flux, rank, 1.2d0, tol_inner_x, tol_inner_maxit,core_x_size,core_y_size)
+        CALL sor(amat, bvec, flux, rank, w_opt, tol_inner_x, tol_inner_maxit,core_x_size,core_y_size)
       CASE DEFAULT
         call fatal_error('selected inner_solve method not implemented')
     ENDSELECT
@@ -873,4 +896,134 @@ CONTAINS
       WRITE(*,'(10000ES16.8)')s_bar_y(:,j,1)
     ENDDO
   ENDSUBROUTINE comp_s
+
+!---------------------------------------------------------------------------------------------------
+!> @brief update the optimized over-relaxation factor when using SOR
+!> @param num_eg - number of energy groups
+!> @param hist_it - array containing iteration history of SOR "1" is newest
+!> @param hist_omega - array containing omega history of SOR "1" is newest
+!> @param w_opt - new optimized over-relaxation factors
+!>
+  SUBROUTINE sor_update_omega(num_eg, hist_it, hist_omega, w_opt)
+    INTEGER(ki4), INTENT(IN) :: num_eg
+    INTEGER(ki4), INTENT(INOUT) :: hist_it(:,:)
+    REAL(kr8), INTENT(INOUT) :: hist_omega(:,:)
+    REAL(kr8), INTENT(INOUT) :: w_opt(:)
+
+    INTEGER(ki4) :: g
+    REAL(kr8) :: w_test
+
+    IF (hist_it(1,1) < 0) THEN
+      ! first outer iteration
+      w_opt = 1.2d0
+      hist_it(1,:) = 0
+      hist_omega(3,:) = w_opt
+      RETURN
+    ELSEIF (hist_it(2,1) < 0) THEN
+      ! second outer iteration
+      w_opt = 1.5d0
+      hist_it(2,:) = hist_it(1,:)
+      hist_it(1,:) = 0
+      hist_omega(2,:) = w_opt
+      RETURN
+    ELSEIF (hist_it(3,1) < 0) THEN
+      ! third outer iteration
+      w_opt = 1.9d0
+      hist_it(3,:) = hist_it(2,:)
+      hist_it(2,:) = hist_it(1,:)
+      hist_it(1,:) = 0
+      hist_omega(1,:) = w_opt
+      RETURN
+    ENDIF
+
+    ! update omega
+    DO g = 1,num_eg
+      w_test = min_quad(hist_omega(:,g), REAL(hist_it(:,g), kr8))
+      ! check if w_test is reasonable
+      IF (w_test < 1d0) THEN
+        ! move half-way towards one
+        w_test = 0.5d0*(1d0+hist_omega(1,g))
+      ELSEIF (w_test > 2d0) THEN
+        ! move half-way towards two
+        w_test = 0.5d0*(2d0+hist_omega(1,g))
+      ENDIF
+      w_opt(g) = w_test
+    ENDDO
+
+    hist_it(3,:) = hist_it(2,:)
+    hist_it(2,:) = hist_it(1,:)
+    hist_it(1,:) = 0
+
+    hist_omega(3,:) = hist_omega(2,:)
+    hist_omega(2,:) = hist_omega(1,:)
+    hist_omega(1,:) = w_opt
+
+    RETURN
+  ENDSUBROUTINE sor_update_omega
+
+!---------------------------------------------------------------------------------------------------
+!> @brief find the local minimum of a quadratic described by (x1,y1),(x2,y2),(x3,y)
+!> @param x - "x" values to be optimized
+!> @param y - "y" values to be optimized
+!> @return minimum value of quadratic fit
+!>
+  FUNCTION min_quad(x, y)
+    REAL(kr8) :: min_quad
+    REAL(kr8), INTENT(IN) :: x(3), y(3)
+
+    REAL(kr8) :: a, b, c
+    REAL(kr8) :: min_y, min_x
+    INTEGER(ki4) :: i
+
+    REAL(kr8), PARAMETER :: tol = 1d-4
+
+    ! Protect against two of the "x" values being the same.
+    ! If two of the "x" values are the same, return the average of the otehr two
+    ! values.
+    IF (ABS(x(1) - x(2)) < tol) THEN
+      min_quad = 0.5d0*(x(1)+x(3))
+      RETURN
+    ELSEIF (ABS(x(1) - x(3)) < tol) THEN
+      min_quad = 0.5d0*(x(1)+x(2))
+      RETURN
+    ELSEIF (ABS(x(2) - x(3)) < tol) THEN
+      min_quad = 0.5d0*(x(1)+x(3))
+      RETURN
+    ENDIF
+
+    ! Fit a quadratic function.
+    ! f(x) = a + b * x + c * x**2
+    a = (x(1)*x(2)*y(3)*(x(1) - x(2)) - x(1)*x(3)*y(2)*(x(1) - x(3)) + &
+      x(2)*x(3)*y(1)*(x(2) - x(3)))/(x(1)**2*x(2) - x(1)**2*x(3) - &
+      x(1)*x(2)**2 + x(1)*x(3)**2 + x(2)**2*x(3) - x(2)*x(3)**2)
+    b = (-y(1)*(x(2)**2 - x(3)**2) + y(2)*(x(1)**2 - x(3)**2) - &
+      y(3)*(x(1)**2 - x(2)**2))/(x(1)**2*x(2) - x(1)**2*x(3) - &
+      x(1)*x(2)**2 + x(1)*x(3)**2 + x(2)**2*x(3) - x(2)*x(3)**2)
+    c = (y(1)*(x(2) - x(3)) - y(2)*(x(1) - x(3)) + y(3)*(x(1) - &
+      x(2)))/(x(1)**2*x(2) - x(1)**2*x(3) - x(1)*x(2)**2 + x(1)*x(3)**2 + &
+      x(2)**2*x(3) - x(2)*x(3)**2)
+
+    ! Calculate derivitive and extrema.
+    ! Second derivative test.
+    IF (c > 0d0) THEN
+      ! this is a minimum
+      min_quad = -b/c*0.5d0
+      RETURN
+    ELSE
+      ! this is a maximum
+      ! the minimum is one of the end points
+      ! note that I don't know which points are on the end
+      min_y = y(1)
+      min_x = x(1)
+      DO i = 2,3
+        IF (y(i) < min_y) THEN
+          min_y = y(i)
+          min_x = x(i)
+        ENDIF
+      ENDDO
+      min_quad = min_x
+      RETURN
+    ENDIF
+  ENDFUNCTION min_quad
+
 ENDMODULE solvers_module
