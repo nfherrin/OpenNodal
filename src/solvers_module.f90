@@ -326,6 +326,7 @@ CONTAINS
     xkeff_old=xkeff
     big_lambda=xkeff
     lambda_p=xkeff
+    fiss_src_sum=1.0D0
 
 
     DO iter = 1,tol_max_iter
