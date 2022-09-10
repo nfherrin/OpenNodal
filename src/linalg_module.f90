@@ -29,6 +29,8 @@ CONTAINS
     ENDIF
 
     SELECT CASE (ell)
+      CASE (-1) ! infinite/maximal norm
+        norm = MAXVAL(ABS(vec))
       CASE (1)
         norm = SUM(ABS(vec))
       CASE (2)

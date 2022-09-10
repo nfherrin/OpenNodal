@@ -49,6 +49,7 @@ MODULE input_module
   INTEGER(ki4) :: r_m=0                           !refl_mat
   REAL(kr8) :: a_b=0.0D0                          !ax_buckle
   REAL(kr8) :: d_w=-1.0D0                         !wielandt shift value
+  CHARACTER(16) :: a_r='NONE'                     !anal_ref
 
   !> This data type stores card information and reads card data
   TYPE :: cardType
@@ -88,6 +89,24 @@ MODULE input_module
 
 CONTAINS
 
+  SUBROUTINE get_prefix(fname, prefix)
+    CHARACTER(*), INTENT(IN) :: fname
+    CHARACTER(LEN=LEN(fname)), INTENT(OUT) :: prefix
+
+    INTEGER :: i
+
+    prefix = fname
+    DO i = LEN(prefix),1,-1
+      IF (prefix(i:i) == '/') THEN
+        prefix(i+1:len(prefix)) = ' '
+        RETURN
+      ENDIF
+    ENDDO
+
+    prefix = ''
+    RETURN
+  ENDSUBROUTINE get_prefix
+
 !---------------------------------------------------------------------------------------------------
 !> @brief This subroutine reads in command line arguments
 !>
@@ -99,6 +118,7 @@ CONTAINS
     IF(arg_count .NE. 1)STOP 'only give input file argument!'
 
     CALL GET_COMMAND_ARGUMENT(1,base_in)
+    CALL get_prefix(base_in, prefix_in)
   ENDSUBROUTINE read_cmd_args
 
 !---------------------------------------------------------------------------------------------------
@@ -126,7 +146,7 @@ CONTAINS
 !>
   SUBROUTINE read_files(prob_dim,core_x_size,core_y_size,assm_pitch,prob_sym,assm_map,h_x,h_y, &
                         bc_opt,albedos,num_eg,nsplit,tol_xkeff,tol_xflux,tol_max_iter,nodal_method, &
-                        num_assm_reg,assm_xs,refl_mat,ax_buckle,dl_wielandt)
+                        num_assm_reg,assm_xs,refl_mat,ax_buckle,dl_wielandt,anal_ref)
     !input/output variables
     INTEGER(ki4), INTENT(OUT) :: prob_dim,core_x_size,core_y_size,num_eg,nsplit,tol_max_iter
     INTEGER(ki4), INTENT(OUT) :: num_assm_reg,refl_mat
@@ -135,6 +155,7 @@ CONTAINS
     INTEGER(ki4), INTENT(OUT), ALLOCATABLE :: assm_map(:,:)
     REAL(kr8), INTENT(OUT), ALLOCATABLE :: h_x(:),h_y(:),albedos(:)
     TYPE(macro_assm_xs_type), INTENT(OUT), ALLOCATABLE :: assm_xs(:)
+    CHARACTER(16), INTENT(OUT) :: anal_ref
     !local variables
     INTEGER(ki4) :: t_int,i
     CHARACTER(100) :: t_char
@@ -235,6 +256,7 @@ CONTAINS
       assm_xs(i)%sigma_scat=a_x(i)%sigma_scat
     ENDDO
     dl_wielandt=d_w
+    anal_ref=a_r
   ENDSUBROUTINE read_files
 
 !---------------------------------------------------------------------------------------------------
@@ -248,7 +270,7 @@ CONTAINS
     !data for caseid block
     i=1
     blocks(i)%bname='[CASE_DETAILS]'
-    blocks(i)%num_cards=7
+    blocks(i)%num_cards=8
     ALLOCATE(blocks(i)%cards(blocks(i)%num_cards))
     j=1
     blocks(i)%cards(j)%cname='title'
@@ -271,6 +293,9 @@ CONTAINS
     j=7
     blocks(i)%cards(j)%cname='wielandt'
     blocks(i)%cards(j)%getcard=>get_wielandt
+    j=8
+    blocks(i)%cards(j)%cname='anal_ref'
+    blocks(i)%cards(j)%getcard=>get_anal_ref
 
     !data for CORE block
     i=2
@@ -813,6 +838,21 @@ CONTAINS
 
   ENDSUBROUTINE get_wielandt
 
+  SUBROUTINE get_anal_ref(this_card,wwords)
+    class(cardType),INTENT(INOUT) :: this_card
+    CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
+
+    INTEGER(ki4) :: nwords
+    CHARACTER(ll_max) :: t_char,words(lp_max)
+    INTEGER(ki4) :: i,ios,j,oct_sym
+
+    CALL print_log(TRIM(this_card%cname)//' card found')
+
+    a_r=TRIM(ADJUSTL(wwords(2)))
+
+    RETURN
+  ENDSUBROUTINE  get_anal_ref
+
 !---------------------------------------------------------------------------------------------------
 !> @brief Subroutine to read in the cross section filename
 !>
@@ -823,6 +863,8 @@ CONTAINS
     CALL print_log(TRIM(this_card%cname)//' card found')
 
     xs_in=wwords(2)
+    xs_in = TRIM(ADJUSTL(prefix_in)) // xs_in
+    RETURN
   ENDSUBROUTINE get_xs_file
 
 !---------------------------------------------------------------------------------------------------

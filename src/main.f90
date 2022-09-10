@@ -3,6 +3,7 @@
 !> @brief Program driver. A Fortran based nodal solver
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++!
 PROGRAM opennodal
+  USE analytic_module
   USE errors_module
   USE globals
   USE input_module
@@ -55,8 +56,10 @@ PROGRAM opennodal
   REAL(kr8), ALLOCATABLE :: xflux(:,:,:) ! (nx,ny,ng
   !>D-tilde correction factors for each surface
   REAL(kr8), ALLOCATABLE  :: dtilde_x(:,:,:),dtilde_y(:,:,:)
-  !> Wielandt shift value
+  !> Weilandt shift value
   REAL(kr8) :: dl_wielandt=-1.0D0
+  !> Analytic solution title
+  CHARACTER(16) :: anal_ref = 'NONE'
 
   !variables to open log file
   CHARACTER(100) :: t_char
@@ -100,7 +103,7 @@ PROGRAM opennodal
   !read the base input file data and cross sections
   CALL read_files(prob_dim,core_x_size,core_y_size,assm_pitch,prob_sym,assm_map,h_x,h_y,bc_opt, &
                   albedos,num_eg,nsplit,tol_xkeff,tol_xflux,tol_max_iter,nodal_method,num_assm_reg, &
-                  assm_xs,refl_mat,ax_buckle,dl_wielandt)
+                  assm_xs,refl_mat,ax_buckle,dl_wielandt,anal_ref)
 
   ! initialize memory and the solver
   ! this is done here to allow for multi-state runs in the future rather than
@@ -111,6 +114,9 @@ PROGRAM opennodal
   !call the solver
   CALL solver(core_x_size,core_y_size,num_eg,tol_xflux,tol_xkeff,xflux,xkeff,tol_max_iter, &
               nodal_method,assm_map,assm_xs,dtilde_x,dtilde_y,h_x,h_y,dl_wielandt)
+
+  if (anal_ref /= 'NONE') call anal (xkeff, xflux, anal_ref, assm_map, assm_pitch, assm_xs, &
+                                     core_x_size, core_y_size, num_eg)
 
   !output the results
   CALL output_results(xflux,xkeff,core_x_size,core_y_size,nsplit,num_eg,assm_xs,h_x,h_y,assm_map)
