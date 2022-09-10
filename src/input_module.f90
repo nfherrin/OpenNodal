@@ -729,10 +729,6 @@ CONTAINS
     CLASS(cardType), INTENT(INOUT) :: this_card
     CHARACTER(ll_max), INTENT(INOUT) :: wwords(:)
 
-    INTEGER(ki4) :: nwords
-    CHARACTER(ll_max) :: t_char,words(lp_max)
-    INTEGER(ki4) :: i,ios,j,oct_sym
-
     wwords(1)=TRIM(wwords(1))
     CALL print_log(TRIM(this_card%cname)//' card found')
 
@@ -746,10 +742,6 @@ CONTAINS
   SUBROUTINE get_k_eps(this_card,wwords)
     CLASS(cardType), INTENT(INOUT) :: this_card
     CHARACTER(ll_max), INTENT(INOUT) :: wwords(:)
-
-    INTEGER(ki4) :: nwords
-    CHARACTER(ll_max) :: t_char,words(lp_max)
-    INTEGER(ki4) :: i,ios,j,oct_sym
 
     wwords(1)=TRIM(wwords(1))
     CALL print_log(TRIM(this_card%cname)//' card found')
@@ -765,10 +757,6 @@ CONTAINS
     CLASS(cardType), INTENT(INOUT) :: this_card
     CHARACTER(ll_max), INTENT(INOUT) :: wwords(:)
 
-    INTEGER(ki4) :: nwords
-    CHARACTER(ll_max) :: t_char,words(lp_max)
-    INTEGER(ki4) :: i,ios,j,oct_sym
-
     wwords(1)=TRIM(wwords(1))
     CALL print_log(TRIM(this_card%cname)//' card found')
 
@@ -783,10 +771,6 @@ CONTAINS
     CLASS(cardType), INTENT(INOUT) :: this_card
     CHARACTER(ll_max), INTENT(INOUT) :: wwords(:)
 
-    INTEGER(ki4) :: nwords
-    CHARACTER(ll_max) :: t_char,words(lp_max)
-    INTEGER(ki4) :: i,ios,j,oct_sym
-
     wwords(1)=TRIM(wwords(1))
     CALL print_log(TRIM(this_card%cname)//' card found')
 
@@ -800,10 +784,6 @@ CONTAINS
   SUBROUTINE get_nodal_method(this_card,wwords)
     CLASS(cardType), INTENT(INOUT) :: this_card
     CHARACTER(ll_max), INTENT(INOUT) :: wwords(:)
-
-    INTEGER(ki4) :: nwords
-    CHARACTER(ll_max) :: t_char,words(lp_max)
-    INTEGER(ki4) :: i,ios,j,oct_sym
 
     wwords(1)=TRIM(wwords(1))
     CALL print_log(TRIM(this_card%cname)//' card found')
@@ -823,10 +803,6 @@ CONTAINS
     CLASS(cardType),INTENT(INOUT) :: this_card
     CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
 
-    INTEGER(ki4) :: nwords
-    CHARACTER(ll_max) :: t_char,words(lp_max)
-    INTEGER(ki4) :: i,ios,j,oct_sym
-
     CALL print_log(TRIM(this_card%cname)//' card found')
 
     wwords(2)=TRIM(ADJUSTL(wwords(2)))
@@ -841,10 +817,6 @@ CONTAINS
   SUBROUTINE get_anal_ref(this_card,wwords)
     class(cardType),INTENT(INOUT) :: this_card
     CHARACTER(ll_max),INTENT(INOUT) :: wwords(:)
-
-    INTEGER(ki4) :: nwords
-    CHARACTER(ll_max) :: t_char,words(lp_max)
-    INTEGER(ki4) :: i,ios,j,oct_sym
 
     CALL print_log(TRIM(this_card%cname)//' card found')
 

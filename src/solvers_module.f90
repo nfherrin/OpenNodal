@@ -71,8 +71,8 @@ CONTAINS
     CHARACTER(*), INTENT(IN) :: bc_opt,prob_sym
     !local variables
     INTEGER(ki4) :: i,ii,j,jj,g,ip,jp,temp_map(core_x_size,core_y_size)
-    INTEGER(ki4) :: temp_hx(core_x_size),temp_hy(core_y_size)
-    REAL(kr8) :: gamma(num_eg)
+    REAL(kr8) :: temp_hx(core_x_size),temp_hy(core_y_size)
+    REAL(kr8) :: albedo_gamma(num_eg)
 
     !set gaps in ragged core equal to the reflector material
     IF(MINVAL(assm_map) .LE. 0 .AND. refl_mat .EQ. 0)&
@@ -129,21 +129,21 @@ CONTAINS
     dtilde_x=0.0D0
     dtilde_y=0.0D0
 
-    !set the gamma value
+    !set the albedo_gamma value
     SELECTCASE(bc_opt)
-      CASE('vac','vacuum') !vacuum gamma is 2
-        gamma=2.0D0
+      CASE('vac','vacuum') !vacuum albedo_gamma is 2
+        albedo_gamma=2.0D0
       CASE('zero') !zero bc gama is 0
-        gamma=0.0D0
+        albedo_gamma=0.0D0
       CASE('reflective') !nothing to do for now, we'll set all dtildes to zero later...
       CASE('reflector')
         !finite difference reflector, does not account for out-scattering
         DO g=1,num_eg
-          gamma(g)=SQRT(assm_xs(refl_mat)%D(g)/assm_xs(refl_mat)%sigma_t(g))/assm_xs(refl_mat)%D(g)
+          albedo_gamma(g)=SQRT(assm_xs(refl_mat)%D(g)/assm_xs(refl_mat)%sigma_t(g))/assm_xs(refl_mat)%D(g)
         ENDDO
       CASE('albedo') !will eventually be supported so give a debugging stop, not a fatal error
         DO g=1,num_eg
-          gamma(g)=2.0D0+4.0D0/(albedos(g)**(-1)-1)
+          albedo_gamma(g)=2.0D0+4.0D0/(albedos(g)**(-1)-1)
         ENDDO
     ENDSELECT
 
@@ -152,10 +152,10 @@ CONTAINS
       DO j=1,core_y_size
         SELECT CASE(prob_sym)
           CASE('full') !vacuum on all sides
-                dtilde_x(1,j,g)=(0.5D0*h_x(1)/assm_xs(assm_map(1,j))%D(g)+gamma(g))**(-1)
-                dtilde_x(core_x_size+1,j,g)=(0.5D0*h_x(core_x_size)/assm_xs(assm_map(core_x_size,j))%D(g)+gamma(g))**(-1)
+                dtilde_x(1,j,g)=(0.5D0*h_x(1)/assm_xs(assm_map(1,j))%D(g)+albedo_gamma(g))**(-1)
+                dtilde_x(core_x_size+1,j,g)=(0.5D0*h_x(core_x_size)/assm_xs(assm_map(core_x_size,j))%D(g)+albedo_gamma(g))**(-1)
           CASE('qtr','half') !vacuum on right and bot sides or on right bot and top sides
-            dtilde_x(core_x_size+1,j,g)=(0.5D0*h_x(core_x_size)/assm_xs(assm_map(core_x_size,j))%D(g)+gamma(g))**(-1)
+            dtilde_x(core_x_size+1,j,g)=(0.5D0*h_x(core_x_size)/assm_xs(assm_map(core_x_size,j))%D(g)+albedo_gamma(g))**(-1)
           CASE DEFAULT
             CALL fatal_error('Invalid symmetry option: '//TRIM(ADJUSTL(prob_sym)))
         ENDSELECT
@@ -163,10 +163,10 @@ CONTAINS
       DO i=1,core_x_size
         SELECT CASE(prob_sym)
           CASE('full','half') !vacuum on all sides or right and top/bot sides
-            dtilde_y(i,1,g)=(0.5D0*h_y(1)/assm_xs(assm_map(i,1))%D(g)+gamma(g))**(-1)
-            dtilde_y(i,core_y_size+1,g)=(0.5D0*h_y(core_y_size)/assm_xs(assm_map(i,core_y_size))%D(g)+gamma(g))**(-1)
+            dtilde_y(i,1,g)=(0.5D0*h_y(1)/assm_xs(assm_map(i,1))%D(g)+albedo_gamma(g))**(-1)
+            dtilde_y(i,core_y_size+1,g)=(0.5D0*h_y(core_y_size)/assm_xs(assm_map(i,core_y_size))%D(g)+albedo_gamma(g))**(-1)
           CASE('qtr')!vacuum on right and bot sides
-            dtilde_y(i,core_y_size+1,g)=(0.5D0*h_y(core_y_size)/assm_xs(assm_map(i,core_y_size))%D(g)+gamma(g))**(-1)
+            dtilde_y(i,core_y_size+1,g)=(0.5D0*h_y(core_y_size)/assm_xs(assm_map(i,core_y_size))%D(g)+albedo_gamma(g))**(-1)
           CASE DEFAULT
             CALL fatal_error('Invalid symmetry option: '//TRIM(ADJUSTL(prob_sym)))
         ENDSELECT
@@ -195,7 +195,6 @@ CONTAINS
 !> @param aa - A matrix
 !> @param b - RHS b vector
 !> @param xflux - scalar flux
-!> @param rank - system size
 !> @param omega - Over-relaxation factor
 !> @param tol_inner_x - Inner tolerance
 !> @param tol_inner_maxit - Number of max iterations
@@ -203,13 +202,13 @@ CONTAINS
 !> @param core_y_size - core size in the y direction
 !> @param iter - number of iterations required for convergence
 !>
-  SUBROUTINE sor(aa, b, flux, rank, omega, tol_inner_x, tol_inner_maxit, core_x_size, core_y_size, iter)
+  SUBROUTINE sor(aa, b, flux, omega, tol_inner_x, tol_inner_maxit, core_x_size, core_y_size, iter)
     IMPLICIT NONE
     ! designed for a 5-stripe matrix with the diagonal in the fifth position
     REAL(kr8),    INTENT(IN)    :: aa(:,:) ! (5, rank)
     REAL(kr8),    INTENT(IN)    :: b(:)    ! (rank)
     REAL(kr8),    INTENT(INOUT) :: flux(:,:)    ! (rank)
-    INTEGER(ki4), INTENT(IN)    :: rank,core_x_size,core_y_size
+    INTEGER(ki4), INTENT(IN)    :: core_x_size,core_y_size
     REAL(kr8),    INTENT(IN)    :: omega
     REAL(kr8),    INTENT(IN)    :: tol_inner_x
     INTEGER(ki4), INTENT(IN)    :: tol_inner_maxit
@@ -314,6 +313,9 @@ CONTAINS
     IF(wielandt_on)THEN
       ALLOCATE(amat_base(5, core_x_size*core_y_size,num_eg))
       amat_base=amat
+    ELSE
+      ALLOCATE(amat_base(1,1,1))
+      amat_base(1,1,1) = 0d0
     ENDIF
 
     CALL print_log(' Iter | Keff     | Conv_Keff | Conv_Flux')
@@ -401,7 +403,7 @@ CONTAINS
     ENDDO ! iter = 1,tol_max_iter
 
     DEALLOCATE(amat, flux_old, bvec)
-
+    DEALLOCATE(amat_base)
     DEALLOCATE(sor_hist_it, sor_hist_omega, sor_opt_omega)
 
     CALL print_log('ITERATIONS FINISHED')
@@ -599,7 +601,7 @@ CONTAINS
         ENDDO
         DEALLOCATE(atemp, ipiv)
       CASE ('sor')
-        CALL sor(amat, bvec, flux, rank, w_opt, tol_inner_x, tol_inner_maxit,core_x_size,core_y_size, itcount)
+        CALL sor(amat, bvec, flux, w_opt, tol_inner_x, tol_inner_maxit,core_x_size,core_y_size, itcount)
       CASE DEFAULT
         call fatal_error('selected inner_solve method not implemented')
     ENDSELECT

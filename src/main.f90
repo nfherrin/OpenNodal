@@ -62,8 +62,8 @@ PROGRAM opennodal
   CHARACTER(16) :: anal_ref = 'NONE'
 
   !variables to open log file
-  CHARACTER(100) :: t_char
-  CHARACTER(100) :: words(100)
+  CHARACTER(1024) :: t_char
+  CHARACTER(1024) :: words(100)
   INTEGER(ki4) :: nwords,i
 
   !standard output

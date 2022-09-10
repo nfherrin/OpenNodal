@@ -68,6 +68,7 @@ CONTAINS
           (assm_xs(mat_num)%D(1)*bsq_geo + assm_xs(mat_num)%sigma_r(1))
         RETURN
       CASE DEFAULT
+        calc_keff = -1d0
         CALL fatal_error (&
           'analytic keff calculation not implemented for reference problem: ' &
           // anal_ref)
@@ -92,6 +93,8 @@ CONTAINS
                          core_x_size, core_y_size)
         calc = xkeff
       CASE DEFAULT
+        anal = -1d0
+        calc = -1d0
         CALL fatal_error (&
           'analytic keff calculation not implemented for reference problem: ' &
           // anal_ref)
@@ -128,6 +131,7 @@ CONTAINS
           (assm_xs(mat_num)%D(2)*bsq_geo + assm_xs(mat_num)%sigma_r(2))
         RETURN
       CASE DEFAULT
+        calc_frat = -1d0
         CALL fatal_error (&
           'analytic ratio calculation not implemented for reference problem: ' &
           // anal_ref)
@@ -151,10 +155,12 @@ CONTAINS
         anal = calc_frat(anal_ref, assm_map, assm_pitch, assm_xs, core_x_size, core_y_size)
         calc = maxval(abs(xflux(:,:,2))) / maxval(abs(xflux(:,:,1))) ! TODO rewrite with inf norm
       CASE DEFAULT
+        anal = -1d0
+        calc = -1d0
         CALL fatal_error (&
           'analytic ratio calculation not implemented for reference problem: ' &
           // anal_ref)
-        ENDSELECT
+    ENDSELECT
 
     err = anal - calc
 
@@ -165,9 +171,8 @@ CONTAINS
     RETURN
   ENDSUBROUTINE anal_frat
 
-  REAL(kr8) FUNCTION calc_flux(x, y, z, anal_ref, assm_pitch, core_x_size, &
-                               core_y_size)
-    REAL(kr8), INTENT(IN) :: x, y, z
+  REAL(kr8) FUNCTION calc_flux(x, y, anal_ref, assm_pitch, core_x_size, core_y_size)
+    REAL(kr8), INTENT(IN) :: x, y
     CHARACTER(*), INTENT(IN) :: anal_ref
     REAL(kr8), INTENT(IN) :: assm_pitch
     INTEGER(ki4), INTENT(IN) :: core_x_size, core_y_size
@@ -182,6 +187,7 @@ CONTAINS
         calc_flux = 1d0*SIN(pi/Lx*x)*SIN(pi/Ly*y)
         RETURN
       CASE DEFAULT
+        calc_flux = -1d0
         CALL fatal_error (&
           'analytic flux calculation not implemented for reference problem: ' &
           // anal_ref)
@@ -217,7 +223,7 @@ CONTAINS
       y = dy*(j-0.5d0)
       DO i = 1,core_x_size
         x = dx*(i-0.5d0)
-        diff = calc_flux(x, y, 0d0, anal_ref, assm_pitch, core_x_size, core_y_size) - cpy_flux(i,j,1)
+        diff = calc_flux(x, y, anal_ref, assm_pitch, core_x_size, core_y_size) - cpy_flux(i,j,1)
         diff_two = diff_two + diff**2
         diff_inf = MAX(diff_inf, ABS(diff))
       ENDDO
