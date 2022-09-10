@@ -1,7 +1,6 @@
 import unittest
 import driver
 import os
-import glob
 import numpy as np
 
 
@@ -45,28 +44,14 @@ class TestLight(unittest.TestCase):
 
         base_input_file = os.path.join(self.dirname, "../examples/2d_ss_uniform.inp")
 
-        with open(base_input_file, "r") as f:
-            dat = f.readlines()
+        nrefine = 5  # [1, 2, 4, 8, 16]
 
-        # TODO work with numbers other than two...
-        for i in range(len(dat)):
-            line = dat[i]
-            if "nsplit" in line:
-                dat[i] = "nsplit 2\n"
+        xkeff_refine, xflux_refine = driver.refinement_order(
+            self.executable, base_input_file, nrefine
+        )
 
-        tmp_input_file = base_input_file + ".tmp"
-        with open(tmp_input_file, "w") as f:
-            f.writelines(dat)
-
-        data = driver.run(self.executable, tmp_input_file)
-        print("k2=", driver.get_value(data, "XKEFF"))
-
-        # cleanup after ourselves
-        for fl in glob.glob(tmp_input_file + "*"):
-            os.remove(fl)
-
-        # TODO
-        self.assertTrue(True)
+        self.assert_absolute_equal(xkeff_refine, 2.0, tol=0.01)
+        self.assert_absolute_equal(xflux_refine, 2.0, tol=0.01)
 
 
 if __name__ == "__main__":

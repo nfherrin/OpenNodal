@@ -119,7 +119,6 @@ CONTAINS
 
     CALL GET_COMMAND_ARGUMENT(1,base_in)
     CALL get_prefix(base_in, prefix_in)
-  ! todo need to implement "stub" or base filename for executing in different directory
   ENDSUBROUTINE read_cmd_args
 
 !---------------------------------------------------------------------------------------------------

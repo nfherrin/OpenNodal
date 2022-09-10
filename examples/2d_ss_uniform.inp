@@ -6,6 +6,7 @@ OpenNodal_INP_V1
   phi_eps 1.0D-10
   max_its 10000
   nodal_method fd
+  anal_ref 2d2g
 
 [CORE]
   dim 2D
