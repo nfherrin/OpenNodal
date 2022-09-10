@@ -201,19 +201,21 @@ CONTAINS
 !> @param tol_inner_maxit - Number of max iterations
 !> @param core_x_size - core size in the x direction
 !> @param core_y_size - core size in the y direction
+!> @param iter - number of iterations required for convergence
 !>
-  SUBROUTINE sor(aa, b, flux, rank, omega, tol_inner_x, tol_inner_maxit,core_x_size,core_y_size)
+  SUBROUTINE sor(aa, b, flux, rank, omega, tol_inner_x, tol_inner_maxit, core_x_size, core_y_size, iter)
     IMPLICIT NONE
     ! designed for a 5-stripe matrix with the diagonal in the fifth position
-    REAL(kr8),    INTENT(IN) :: aa(:,:) ! (5, rank)
-    REAL(kr8),    INTENT(IN) :: b(:)    ! (rank)
+    REAL(kr8),    INTENT(IN)    :: aa(:,:) ! (5, rank)
+    REAL(kr8),    INTENT(IN)    :: b(:)    ! (rank)
     REAL(kr8),    INTENT(INOUT) :: flux(:,:)    ! (rank)
-    INTEGER(ki4), INTENT(IN) :: rank,core_x_size,core_y_size
-    REAL(kr8),    INTENT(IN) :: omega
-    REAL(kr8),    INTENT(IN) :: tol_inner_x
-    INTEGER(ki4), INTENT(IN) :: tol_inner_maxit
+    INTEGER(ki4), INTENT(IN)    :: rank,core_x_size,core_y_size
+    REAL(kr8),    INTENT(IN)    :: omega
+    REAL(kr8),    INTENT(IN)    :: tol_inner_x
+    INTEGER(ki4), INTENT(IN)    :: tol_inner_maxit
+    INTEGER(ki4), INTENT(OUT)   :: iter
 
-    INTEGER(ki4) :: i, j, iter
+    INTEGER(ki4) :: i, j
     INTEGER(ki4) :: cell_idx
     REAL(kr8)    :: zum, xdif, xmax
     REAL(kr8)    :: fold, fnew
@@ -597,8 +599,7 @@ CONTAINS
         ENDDO
         DEALLOCATE(atemp, ipiv)
       CASE ('sor')
-        ! TODO set omega better than this
-        CALL sor(amat, bvec, flux, rank, w_opt, tol_inner_x, tol_inner_maxit,core_x_size,core_y_size)
+        CALL sor(amat, bvec, flux, rank, w_opt, tol_inner_x, tol_inner_maxit,core_x_size,core_y_size, itcount)
       CASE DEFAULT
         call fatal_error('selected inner_solve method not implemented')
     ENDSELECT
